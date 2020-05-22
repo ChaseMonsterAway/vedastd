@@ -1,0 +1,2 @@
+# vedastd
+scene text detection

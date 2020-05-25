@@ -4,7 +4,11 @@ from vedastd.utils import build_from_cfg
 from .registry import CRITERIA
 
 
-def build_criterion(cfg):
+def build_criterion(cfgs):
     #criterion = CriterionWrapper(cfg)
-    criterion = build_from_cfg(cfg, CRITERIA, src='registry')
-    return criterion
+    criterion_list = []
+    for cfg in cfgs:
+        criterion = build_from_cfg(cfg, CRITERIA, src='registry')
+        criterion_list.append(criterion)
+
+    return criterion_list

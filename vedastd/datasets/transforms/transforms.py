@@ -132,8 +132,8 @@ class MakeBoarderMap:
                 continue
             self.draw_border_map(polygons[i], canvas, mask=mask)
         canvas = canvas * (self.thresh_max - self.thresh_min) + self.thresh_min
-        data['thresh_map_label'] = canvas
-        data['thresh_mask_label'] = mask
+        data['boarder_label'] = canvas
+        data['boarder_mask_label'] = mask
 
         return data
 
@@ -209,7 +209,7 @@ class MakeBoarderMap:
 
         result[cosin < 0] = np.sqrt(np.fmin(
             square_distance_1, square_distance_2))[cosin < 0]
-        # self.extend_line(point_1, point_2, result)
+
         return result
 
     def extend_line(self, point_1, point_2, result):
@@ -235,10 +235,8 @@ class MakeSegMap:
         image = data['input']
         polygons = data['polygon']
         tags = data['tags']
-        # filename = data['filename']
-
         h, w = image.shape[:2]
-        polygons, ignore_tags = self.validate_polygons(polygons, tags, h, w)
+        polygons, tags = self.validate_polygons(polygons, tags, h, w)
 
         gt = np.zeros((1, h, w), dtype=np.float32)
         mask = np.ones((h, w), dtype=np.float32)
@@ -247,10 +245,10 @@ class MakeSegMap:
             height = max(polygon[:, 1]) - min(polygon[:, 1])
             width = max(polygon[:, 0]) - min(polygon[:, 0])
 
-            if ignore_tags[i] or min(height, width) < self.min_text_size:
+            if not tags[i] or min(height, width) < self.min_text_size:
                 cv2.fillPoly(mask, polygon.astype(
                     np.int32)[np.newaxis, :, :], 0)
-                ignore_tags[i] = True
+                tags[i] = False
             else:
                 polygon_shape = Polygon(polygon)
                 distance = polygon_shape.area * \
@@ -263,7 +261,7 @@ class MakeSegMap:
                 if shrinked == []:
                     cv2.fillPoly(mask, polygon.astype(
                         np.int32)[np.newaxis, :, :], 0)
-                    ignore_tags[i] = True
+                    tags[i] = False
                     continue
                 shrinked = np.array(shrinked[0]).reshape(-1, 2)
                 cv2.fillPoly(gt[0], [shrinked.astype(np.int32)], 1)

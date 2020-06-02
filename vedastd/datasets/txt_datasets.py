@@ -1,5 +1,7 @@
 import os
 
+import cv2
+
 from .base import BaseDataset
 from .registry import DATASETS
 
@@ -7,21 +9,46 @@ from .registry import DATASETS
 @DATASETS.register_module
 class TxtDataset(BaseDataset):
 
-    def __init__(self, root, gt_txt, transform=None, character='abcdefghijklmnopqrstuvwxyz0123456789',
-                 batch_max_length=25, data_filter_off=False, unknown=False):
-        super(TxtDataset, self).__init__(root, gt_txt, transform, character=character,
-                                         batch_max_length=batch_max_length,
-                                         data_filter_off=data_filter_off,
-                                         unknown=unknown)
+    def __init__(self, img_root, gt_root, transforms):
+        super(TxtDataset, self).__init__(img_root, gt_root, transforms)
 
-    def get_name_list(self):
-        with open(self.gt_txt, 'r') as gt:
-            for line in gt.readlines():
-                img_name, label = line.strip().split('\t')
-                if self.filter(label):
-                    continue
-                else:
-                    self.img_names.append(os.path.join(self.root, img_name))
-                    self.gt_texts.append(label)
+    def get_needed_item(self):
+        need_items = []
+        with open(self.img_root, 'r') as f:
+            for line in f.readlines():
+                line = line.strip()
+                poly_list, tag_list = self.load_ann(line)
+                need_tuple = (os.path.join(self.img_root, line), poly_list, tag_list)
+                need_items.append(need_tuple)
 
-        self.samples = len(self.gt_texts)
+        return need_items
+
+    def load_ann(self, name):
+        poly_list = []
+        tag_list = []
+        with open(os.path.join(self.gt_root, name), 'r') as f:
+            for line in f.readlines():
+                line = line.split(',')
+                line = list(map(int, line))
+                poly_list.append(line[:-1])
+                tag_list.append(line[-1])
+
+        return poly_list, tag_list
+
+    def pre_transforms(self, result):
+        result['img_root'] = self.img_root
+        result['gt_root'] = self.gt_root
+
+    def __getitem__(self, index):
+        im_path, polys, tags = self.item_lists[index]
+        results = dict()
+        self.pre_transforms(results)
+        image = cv2.imread(im_path)
+        results['init_image'] = image
+        results['polygon'] = polys
+        results['tags'] = tags
+
+        if self.transforms:
+            results = self.transforms(results)
+
+        return results

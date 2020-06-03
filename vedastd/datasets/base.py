@@ -9,7 +9,7 @@ class BaseDataset(Dataset):
         self.img_root = img_root
         self.gt_root = gt_root
         self.transforms = transforms
-        self.item_list = self.get_needed_item()
+        self.item_lists = self.get_needed_item()
         self.logger = logging.getLogger()
         self.logger.info(f'current dataset length is {len(self)} in {self.img_root}')
 
@@ -21,4 +21,4 @@ class BaseDataset(Dataset):
         pass
 
     def __len__(self):
-        return len(self.item_list)
+        return len(self.item_lists)

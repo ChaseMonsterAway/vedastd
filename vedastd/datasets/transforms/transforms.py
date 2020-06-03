@@ -1,14 +1,27 @@
+import random
+import math
+from functools import partial
+
 import torch
+import pyclipper
 import numpy as np
 import cv2
 from shapely.geometry import Polygon
-import pyclipper
+
 from .registry import TRANSFORMS
 
 CV2_MODE = {
     'bilinear': cv2.INTER_LINEAR,
     'nearest': cv2.INTER_NEAREST,
-    'cubic': cv2.INTER_AREA,
+    'cubic': cv2.INTER_CUBIC,
+    'area': cv2.INTER_AREA,
+}
+
+CV2_BORDER_MODE = {
+    'constant': cv2.BORDER_CONSTANT,
+    'reflect': cv2.BORDER_REFLECT,
+    'reflect101': cv2.BORDER_REFLECT101,
+    'replicate': cv2.BORDER_REPLICATE,
 }
 
 """
@@ -32,62 +45,50 @@ class Compose:
 
 
 @TRANSFORMS.register_module
-class Normalize:
-    def __init__(self, mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)):
-        self.mean = mean
-        self.std = std
+class FilterKeys:
 
-    def __call__(self, data):
+    def __call__(self, data: dict):
+        keys = list(data.keys())
+
+        for key in keys:
+            if 'input' in key or 'label' in key:
+                continue
+            else:
+                data.pop(key)
+
         return data
 
 
 @TRANSFORMS.register_module
-class ToTensor:
-    def __call__(self, data):
-        return data
-
-
-@TRANSFORMS.register_module
-class Resize:
-    def __init__(self, size, keep_ratio=False, keep_long=False, mode='cubic'):
-        self.size = size
-        self.keep_ratio = keep_ratio
-        self.keep_long = keep_long
-        self.mode = mode
-
-    def __call__(self, data):
-        return data
-
-
-@TRANSFORMS.register_module
-class PadIfNeeded:
-    def __init__(self, size, pad_value=0):
-        self.height = size[0]
-        self.width = size[1]
-        self.pad_value = pad_value
-
-    def __call__(self, data):
-        return data
-
-
 class MakeShrinkMap:
 
-    def __init__(self, ratios: list, max_shr: (int, float)):
+    def __init__(self, ratios: list, max_shr: (int, float), min_text_size: int, prefix: str):
         self.ratios = ratios
         self.max_shr = max_shr
+        self.min_text_size = min_text_size
+        self.prefix = prefix
 
     def __call__(self, data: dict):
         assert 'polygon' in data, f'{self} need polygon to generate ' \
                                   f'shrink map'
         shrink_maps = []
+        mask_maps = []
         polygons = data['polygon']
         image = data['input']
+        tags = data['tags']
         h, w = image.shape[:2]
         for ratio in self.ratios:
             ratio = 1 - ratio ** 2
-            current_shrink_map = np.zeros(shape=(1, h, w), dtype=np.float32)
-            for polygon in polygons:
+            current_shrink_map = np.zeros(shape=(h, w, 1), dtype=np.float32)
+            current_mask_map = np.ones(shape=(h, w, 1), dtype=np.float32)
+            for idx, polygon in enumerate(polygons):
                 polygon = np.array(polygon).reshape(-1, 2)
+                height = max(polygon[:, 1]) - min(polygon[:, 1])
+                width = max(polygon[:, 0]) - min(polygon[:, 0])
+                if not tags[idx] or min(height, width) < self.min_text_size:
+                    tags[idx] = False
+                    cv2.fillPoly(current_mask_map[:, :, 0], [polygon.astype(np.int32)], 0)
+                    continue
                 p_polygon = Polygon(polygon)
                 area = p_polygon.area
                 perimeter = p_polygon.length
@@ -99,28 +100,28 @@ class MakeShrinkMap:
                     shrink_box = polygon
 
                 shrink_box = np.array(shrink_box[0]).reshape(-1, 2)
-                cv2.fillPoly(current_shrink_map[0], [shrink_box.astype(np.int32)], 1)
+                cv2.fillPoly(current_shrink_map[:, :, 0], [shrink_box.astype(np.int32)], 1)
 
             shrink_maps.append(current_shrink_map)
-        data.update(shrink_map_label=shrink_maps)
+            mask_maps.append(current_mask_map)
+        data[self.prefix + '_map_label'] = shrink_maps
+        data[self.prefix + '_mask_label'] = mask_maps
+        data['mask_type'].append(self.prefix + '_map_label')
+        data['mask_type'].append(self.prefix + '_mask_label')
 
         return data
 
 
+@TRANSFORMS.register_module
 class MakeBoarderMap:
 
-    def __init__(self, shrink_ratio, thresh_min, thresh_max):
+    def __init__(self, shrink_ratio, thresh_min=0.3, thresh_max=0.7):
         self.shrink_ratio = shrink_ratio
         self.thresh_min = thresh_min
         self.thresh_max = thresh_max
 
     def __call__(self, data):
-        r'''
-        required keys:
-            image, polygons, ignore_tags
-        adding keys:
-            thresh_map, thresh_mask
-        '''
+
         image = data['input']
         polygons = data['polygon']
         tags = data['tags']
@@ -132,8 +133,11 @@ class MakeBoarderMap:
                 continue
             self.draw_border_map(polygons[i], canvas, mask=mask)
         canvas = canvas * (self.thresh_max - self.thresh_min) + self.thresh_min
-        data['boarder_label'] = canvas
+        data['boarder_map_label'] = canvas
         data['boarder_mask_label'] = mask
+
+        data['mask_type'].append('boarder_map_label')
+        data['mask_type'].append('boarder_mask_label')
 
         return data
 
@@ -224,87 +228,239 @@ class MakeBoarderMap:
         return ex_point_1, ex_point_2
 
 
-class MakeSegMap:
-
-    def __init__(self, min_text_size, shrink_ratio):
-        self.min_text_size = min_text_size
-        self.shrink_ratio = shrink_ratio
+@TRANSFORMS.register_module
+class Normalize:
+    def __init__(self, mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5), key: str = 'input'):
+        self.mean = mean
+        self.std = std
+        self.key = key
 
     def __call__(self, data):
+        assert self.key in data, f'{self.key} is not in data, pls check it'
+        image = data[self.key]
+        mean = torch.as_tensor(self.mean, dtype=torch.float32, device=image.device).view(-1, 1, 1)
+        std = torch.as_tensor(self.std, dtype=torch.float32, device=image.device).view(-1, 1, 1)
+        image.sub_(mean).div_(std)
 
-        image = data['input']
-        polygons = data['polygon']
-        tags = data['tags']
-        h, w = image.shape[:2]
-        polygons, tags = self.validate_polygons(polygons, tags, h, w)
+        data[self.key] = image
 
-        gt = np.zeros((1, h, w), dtype=np.float32)
-        mask = np.ones((h, w), dtype=np.float32)
-        for i in range(len(polygons)):
-            polygon = polygons[i]
-            height = max(polygon[:, 1]) - min(polygon[:, 1])
-            width = max(polygon[:, 0]) - min(polygon[:, 0])
-
-            if not tags[i] or min(height, width) < self.min_text_size:
-                cv2.fillPoly(mask, polygon.astype(
-                    np.int32)[np.newaxis, :, :], 0)
-                tags[i] = False
-            else:
-                polygon_shape = Polygon(polygon)
-                distance = polygon_shape.area * \
-                           (1 - np.power(self.shrink_ratio, 2)) / polygon_shape.length
-                subject = [tuple(l) for l in polygons[i]]
-                padding = pyclipper.PyclipperOffset()
-                padding.AddPath(subject, pyclipper.JT_ROUND,
-                                pyclipper.ET_CLOSEDPOLYGON)
-                shrinked = padding.Execute(-distance)
-                if shrinked == []:
-                    cv2.fillPoly(mask, polygon.astype(
-                        np.int32)[np.newaxis, :, :], 0)
-                    tags[i] = False
-                    continue
-                shrinked = np.array(shrinked[0]).reshape(-1, 2)
-                cv2.fillPoly(gt[0], [shrinked.astype(np.int32)], 1)
-
-        data.update(input=image,
-                    polygon=polygons,
-                    gt=gt, mask=mask)
         return data
-
-    def validate_polygons(self, polygons, tags, h, w):
-        '''
-        polygons (numpy.array, required): of shape (num_instances, num_points, 2)
-        '''
-        if len(polygons) == 0:
-            return polygons, tags
-        assert len(polygons) == len(tags)
-        for polygon in polygons:
-            polygon[:, 0] = np.clip(polygon[:, 0], 0, w - 1)
-            polygon[:, 1] = np.clip(polygon[:, 1], 0, h - 1)
-
-        for i in range(len(polygons)):
-            area = self.polygon_area(np.array(polygons[i]).reshape(-1, 2))
-            if abs(area) < 1:
-                tags[i] = False
-            if area > 0:
-                polygons[i] = polygons[i][::-1, :]
-        return polygons, tags
-
-    def polygon_area(self, polygon):
-        edge = 0
-        for i in range(polygon.shape[0]):
-            next_index = (i + 1) % polygon.shape[0]
-            edge += (polygon[next_index, 0] - polygon[i, 0]) * (polygon[next_index, 1] - polygon[i, 1])
-
-        return edge / 2.
 
 
 @TRANSFORMS.register_module
-class FilterKeys:
+class PadIfNeeded:
+    def __init__(self, size, pad_value=0):
+        self.height = size[0]
+        self.width = size[1]
+        self.pad_value = pad_value
+
+    def __call__(self, data):
+        return data
+
+
+@TRANSFORMS.register_module
+class RandomCrop:
+
+    def __init__(self):
+        pass
+
+    def __call__(self, data):
+        pass
+
+
+@TRANSFORMS.register_module
+class RandomFlip:
+    def __init__(self, p, horizontal, vertical):
+        self.p = p
+        self.h = horizontal
+        self.v = vertical
+
+    def _random_horizontal_flip(self, img, flag=False):
+        if flag:
+            img = np.flip(img, axis=1).copy()
+        return img
+
+    def _random_vertical_flip(self, img, flag=False):
+        if flag:
+            img = np.flip(img, axis=0).copy()
+        return img
+
+    def _flip(self, image, hflag, vflag):
+        image = self._random_horizontal_flip(image, hflag)
+        image = self._random_vertical_flip(image, vflag)
+
+        return image
 
     def __call__(self, data: dict):
-        for key in data.keys():
-            if 'input' not in key and 'label' not in key:
-                data.pop(key)
+        hflag = True if random.random() < self.p else False
+        vflag = True if random.random() < self.p else False
+        hflag = hflag & self.h
+        vflag = vflag & self.v
+
+        flip = partial(self._flip, hflag=hflag, vflag=vflag)
+        mask_type_lists = data['mask_type']
+        image_type_lists = data['image_type']
+        for key, values in data.items():
+            if key in mask_type_lists or key in image_type_lists:
+                if isinstance(values, list):
+                    temp_list = []
+                    for value in values:
+                        value = flip(image=value)
+                        temp_list.append(value)
+                    data[key] = temp_list
+                else:
+                    values = flip(image=values)
+                    data[key] = values
+
+        return data
+
+
+@TRANSFORMS.register_module
+class RandomRotation(object):
+
+    def __init__(self, img_value=0, mask_value=0, angles: tuple = None, p=0.5, img_mode='bilinear',
+                 img_border_mode='constant', mask_mode='bilinear', mask_border_mode='constant'):
+        self.p = 1 - p
+        self.angles = angles if angles is not None else (0, 360)
+        self.img_value = img_value
+        self.mask_value = mask_value
+        self.img_border_mode = CV2_BORDER_MODE[img_border_mode]
+        self.img_mode = CV2_MODE[img_mode]
+        self.mask_border_mode = CV2_BORDER_MODE[mask_border_mode]
+        self.mask_mode = CV2_MODE[mask_mode]
+
+    def affine(self, image, rotation_mat, h, w, mode, border_mode, border_value):
+        ndims = image.ndim
+        new_img = cv2.warpAffine(image, rotation_mat, (w, h), flags=mode,
+                                 borderMode=border_mode, borderValue=border_value)
+        if new_img.ndim != ndims:
+            new_img = new_img[:, :, np.newaxis]
+        return new_img
+
+    def __call__(self, data):
+        if random.random() < self.p:
+            return data
+        degree = random.randint(self.angles[0], self.angles[1])
+        h, w = data['input'].shape[:2]
+        mask_type_lists = data['mask_type']
+        image_type_lists = data['image_type']
+        rotation_mat = cv2.getRotationMatrix2D((w / 2, h / 2), degree, 1)
+        affine = partial(self.affine, rotation_mat=rotation_mat, w=w, h=h)
+
+        for key, values in data.items():
+            if key in mask_type_lists:
+                mode = self.mask_mode
+                border_mode = self.mask_border_mode
+                pad_value = self.mask_value
+            elif key in image_type_lists:
+                mode = self.img_mode
+                border_mode = self.img_border_mode
+                pad_value = self.img_value
+            else:
+                continue
+
+            if isinstance(values, list):
+                temp_list = []
+                for value in values:
+                    new_img = affine(image=value, mode=mode, border_mode=border_mode, border_value=pad_value)
+                    temp_list.append(new_img)
+                data[key] = temp_list
+            else:
+                new_img = affine(image=values, mode=mode, border_mode=border_mode, border_value=pad_value)
+                data[key] = new_img
+
+        return data
+
+
+@TRANSFORMS.register_module
+class Resize:
+    def __init__(self, size, keep_ratio=False, img_mode='cubic', mask_mode='nearest'):
+        self.h = size[0]
+        self.w = size[1]
+        self.keep_ratio = keep_ratio
+        self.img_mode = img_mode
+        self.mask_mode = mask_mode
+
+    def _get_target_size(self, image):
+        h, w = image.shape[:2]
+        if self.keep_ratio:
+            ratio = min(self.h / h, self.w / w)
+            target_size = int(h * ratio), int(w * ratio)
+        else:
+            target_size = self.h, self.w
+        return target_size
+
+    def _resize(self, image, mode):
+        ndims = image.ndim
+        target_size = self._get_target_size(image)
+        new_image = cv2.resize(image, target_size[::-1], interpolation=CV2_MODE[mode])
+
+        if new_image.ndim != ndims:
+            new_image = new_image[:, :, np.newaxis]
+
+        return new_image
+
+    def __call__(self, data):
+        mask_type_lists = data['mask_type']
+        image_type_lists = data['image_type']
+        for key, values in data.items():
+            print(key)
+            if key in mask_type_lists:
+                mode = self.mask_mode
+            elif key in image_type_lists:
+                mode = self.img_mode
+            else:
+                continue
+            if isinstance(values, list):
+                temp_list = []
+                for value in values:
+                    new_img = self._resize(value, mode)
+                    temp_list.append(new_img)
+                data[key] = temp_list
+            else:
+                new_img = self._resize(values, mode)
+                data[key] = new_img
+
+        return data
+
+
+@TRANSFORMS.register_module
+class KeepLongResize(Resize):
+
+    def __init__(self, *args, **kwargs):
+        super(KeepLongResize, self).__init__(*args, **kwargs)
+        assert self.keep_ratio is True, 'args: keep_ratio should be True'
+
+    def get_target_size(self, image):
+        h, w = image.shape[:2]
+        long_edge, short_edge = max(self.h, self.w), min(self.h, self.w)
+        ratio = min(long_edge / max(h, w), short_edge / min(h, w))
+        target_size = int(h * ratio), int(w * ratio)
+
+        return target_size
+
+
+@TRANSFORMS.register_module
+class ToTensor:
+
+    @staticmethod
+    def to_tensor(value):
+        if value.ndim == 3:
+            if value.shape[0] == 1 or value.shape[0] == 3:
+                return torch.from_numpy(value).float()
+            else:
+                return torch.from_numpy(value).permute(2, 0, 1).float()
+
+        return torch.from_numpy(value).float()
+
+    def __call__(self, data):
+        for key, values in data.items():
+            if isinstance(values, list):
+                temp_list = []
+                for value in values:
+                    temp_list.append(self.to_tensor(value))
+                data[key] = temp_list
+            else:
+                data[key] = self.to_tensor(values)
 
         return data

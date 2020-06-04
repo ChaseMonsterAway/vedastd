@@ -3,12 +3,12 @@ import logging
 
 from vedastd.models.weight_init import init_weights
 from .bricks import build_brick, build_bricks
-from .registry import DECODERS
+from .registry import ENHANCE
 
 logger = logging.getLogger()
 
 
-@DECODERS.register_module
+@ENHANCE.register_module
 class GFPN(nn.Module):
     """GFPN
 

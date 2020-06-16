@@ -156,15 +156,49 @@ model = dict(
             layers=[
                 dict(type='ConvModule', in_channels=257, out_channels=64, kernel_size=3,
                      stride=1, padding=1, bias=False, norm_cfg=norm_cfg),
-
+                dict(type='Upsample', scale_factor=2, mode='nearest'),
+                dict(type='ConvModule', in_channels=64, out_channels=64, kernel_size=3,
+                     stride=1, padding=1, bias=False, norm_cfg=norm_cfg),
+                dict(type='Upsample', scale_factor=2, mode='nearest'),
+                dict(type='ConvModule', in_channels=64, out_channels=64, kernel_size=3,
+                     stride=1, padding=1, bias=False, norm_cfg=None, activation=None),
+                dict(type='ConvModule', in_channels=64, out_channels=1, kernel_size=1,
+                     stride=1, padding=0, bias=True, norm_cfg=None, activation='sigmoid'),
             ]
         ),
         binary=dict(
             name='binary_map',
             layers=[
-                dict(),
+                dict(type='ConvModule', in_channels=256, out_channels=64, kernel_size=3,
+                     stride=1, padding=1, bias=False, norm_cfg=norm_cfg),
+                dict(type='Upsample', scale_factor=2, mode='nearest'),
+                dict(type='ConvModule', in_channels=64, out_channels=64, kernel_size=3,
+                     stride=1, padding=1, bias=False, norm_cfg=norm_cfg),
+                dict(type='Upsample', scale_factor=2, mode='nearest'),
+                dict(type='ConvModule', in_channels=64, out_channels=64, kernel_size=3,
+                     stride=1, padding=1, bias=False, norm_cfg=None, activation=None),
+                dict(type='ConvModule', in_channels=64, out_channels=1, kernel_size=1,
+                     stride=1, padding=0, bias=True, norm_cfg=None, activation='sigmoid'),
             ]
         ),
         out_name='thresh_binary_map',
     )
+)
+
+criterion = [
+    dict(type='DiceLoss', pred_map='binary_map', gt_map='', gt_mask='', weight=0.1),
+    dict(type='SmoothL1Loss', pred_map='thresh_map', gt_map='', gt_mask='', weight=0.1),
+    dict(type='DiceLoss', pred_map='thresh_binary_map', gt_map='', gt_mask='', weight=0.1),
+]
+
+postprocess = dict(
+    train=dict(
+
+    ),
+    val=dict(
+
+    ),
+    test=dict(
+
+    ),
 )

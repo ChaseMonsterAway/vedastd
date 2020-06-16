@@ -4,13 +4,14 @@ import torch
 import torch.nn as nn
 
 from .registry import HEADS
-from ..utils import build_module
+from ..utils import build_module, build_torch_nn
 
 
 @HEADS.register_module
 class DBHead(nn.Module):
 
-    def __init__(self, k, binary, thresh, out_name=None, adaptive=True, fuse_binary=False):
+    def __init__(self, k, binary, thresh, out_name=None,
+                 adaptive=True, fuse_binary=False):
         super(DBHead, self).__init__()
         self.adaptive = adaptive
         self.fuse_binary = fuse_binary

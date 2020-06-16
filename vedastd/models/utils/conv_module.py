@@ -132,13 +132,15 @@ class ConvModule(nn.Module):
         # build activation layer
         if self.with_activatation:
             # TODO: introduce `act_cfg` and supports more activation layers
-            if self.activation not in ['relu', 'tanh']:
+            if self.activation not in ['relu', 'tanh', 'sigmoid']:
                 raise ValueError('{} is currently not supported.'.format(
                     self.activation))
             if self.activation == 'relu':
                 self.activate = nn.ReLU(inplace=inplace)
             elif self.activation == 'tanh':
                 self.activate = nn.Tanh()
+            elif self.activation == 'sigmoid':
+                self.activate = nn.Sigmoid()
 
         if self.with_dropout:
             self.dropout = nn.Dropout2d(p=dropout)

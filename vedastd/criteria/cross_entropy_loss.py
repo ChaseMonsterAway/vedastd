@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 from .registry import CRITERIA
@@ -7,8 +6,8 @@ from .registry import CRITERIA
 @CRITERIA.register_module
 class CrossEntropyLoss(nn.Module):
 
-    def __init__(self, weight=None, size_average=None, ignore_index=-100,
-                 reduce=None, reduction='mean'):
+    def __init__(self, pred_map, gt_map, gt_mask, loss_weight, weight=None,
+                 size_average=None, ignore_index=-100, reduce=None, reduction='mean'):
         super(CrossEntropyLoss, self).__init__()
         self.criteron = nn.CrossEntropyLoss(weight=weight,
                                             size_average=size_average,

@@ -464,3 +464,57 @@ class ToTensor:
                 data[key] = self.to_tensor(values)
 
         return data
+
+
+@TRANSFORMS.register_module
+class Canvas:
+    def __init__(self, size, img_mode='cubic', mask_mode='nearest'):
+        self.h = size[0]
+        self.w = size[1]
+        self.img_mode = img_mode
+        self.mask_mode = mask_mode
+
+    def _get_target_size(self, image):
+        h, w = image.shape[:2]
+        if self.keep_ratio:
+            ratio = min(self.h / h, self.w / w)
+            target_size = int(h * ratio), int(w * ratio)
+        else:
+            target_size = self.h, self.w
+        return target_size
+
+    def _canvas(self, image):
+        ndims = image.ndim
+        if ndims == 3:
+            h, w, c = image.shape
+            new_canvas = np.zeros((self.h, self.w, c))
+            new_canvas[:h, :w, :] = image
+        else:
+            h, w = image.shape
+            new_canvas = np.zeros((self.h, self.w))
+            new_canvas[:h, :w] = image
+
+        return new_canvas
+
+    def __call__(self, data):
+        mask_type_lists = data['mask_type']
+        image_type_lists = data['image_type']
+        for key, values in data.items():
+            print(key)
+            if key in mask_type_lists:
+                mode = self.mask_mode
+            elif key in image_type_lists:
+                mode = self.img_mode
+            else:
+                continue
+            if isinstance(values, list):
+                temp_list = []
+                for value in values:
+                    new_img = self._canvas(value)
+                    temp_list.append(new_img)
+                data[key] = temp_list
+            else:
+                new_img = self._canvas(values)
+                data[key] = new_img
+
+        return data

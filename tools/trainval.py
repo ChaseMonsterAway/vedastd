@@ -1,7 +1,7 @@
 import argparse
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../vedastr'))
+sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../vedastd'))
 
 from vedastd.assembler import assemble
 

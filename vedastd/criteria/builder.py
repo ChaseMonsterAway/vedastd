@@ -5,7 +5,7 @@ from .registry import CRITERIA
 
 
 def build_criterion(cfgs):
-    #criterion = CriterionWrapper(cfg)
+
     criterion_list = []
     for cfg in cfgs:
         criterion = build_from_cfg(cfg, CRITERIA, src='registry')

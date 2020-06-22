@@ -9,7 +9,6 @@ from vedastd.datasets import build_datasets
 from vedastd.datasets.transforms.builder import build_transform
 from vedastd.dataloaders import build_dataloader
 from vedastd.models import build_model
-from vedastd.converter import build_converter
 from vedastd.criteria import build_criterion
 from vedastd.optims import build_optim
 from vedastd.lr_schedulers import build_lr_scheduler
@@ -45,15 +44,15 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
     ## 2.1 dataset
     if not test_mode:
         train_tf = build_transform(cfg['data']['train']['transforms'])
-        train_dataset = build_datasets(cfg['data']['train']['datasets'], dict(transform=train_tf))
+        train_dataset = build_datasets(cfg['data']['train']['datasets'], dict(transforms=train_tf))
 
     if cfg['data'].get('val') and not test_mode:
         val_tf = build_transform(cfg['data']['val']['transforms'])
-        val_dataset = build_datasets(cfg['data']['val']['datasets'], dict(transform=val_tf))
+        val_dataset = build_datasets(cfg['data']['val']['datasets'], dict(transforms=val_tf))
 
     if cfg['data'].get('test') and test_mode:
         test_tf = build_transform(cfg['data']['test']['transforms'])
-        test_dataset = build_datasets(cfg['data']['test']['datasets'], dict(transform=test_tf))
+        test_dataset = build_datasets(cfg['data']['test']['datasets'], dict(transforms=test_tf))
 
     logger.info('Assemble, Step 2, Build Dataloader')
     # 2.2 dataloader
@@ -73,7 +72,6 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
     logger.info('Assemble, Step 3, Build Model')
     # 3. model
     model = build_model(cfg['model'])
-    need_text = model.need_text
     if torch.cuda.is_available():
         logger.info('Using GPU {}'.format(cfg['gpu_id']))
         gpu = True
@@ -83,10 +81,6 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
     else:
         logger.info('Using CPU')
         gpu = False
-
-    logger.info('Assemble, Step4, Build Converter')
-    # 4. converter
-    converter = build_converter(cfg['converter'])
 
     logger.info('Assemble, Step 5, Build Criterion')
     # 5. criterion
@@ -110,16 +104,13 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
         dict(
             loader=loader,
             model=model,
-            converter=converter,
             criterion=criterion,
             lr_scheduler=lr_scheduler,
-            metric=STRMeters(converter),
             optim=optim,
             workdir=cfg['workdir'],
             gpu=gpu,
             test_cfg=cfg.get('test_cfg', None),
-            test_mode=test_mode,
-            need_text=need_text
+            test_mode=test_mode
         )
     )
 

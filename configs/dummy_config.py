@@ -13,7 +13,7 @@ logger = dict(
 )
 
 # 2. data
-batch_size = 192
+batch_size = 1
 
 # transforms
 transforms = [
@@ -21,8 +21,9 @@ transforms = [
     dict(type='MakeShrinkMap', ratios=[1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4], max_shr=20, min_text_size=8,
          prefix='kernel'),
     dict(type='MakeBoarderMap', shrink_ratio=0.4, thresh_min=0.3, thresh_max=0.7),
-    dict(type='Resize', keep_ratio=True, size=(600, 400), img_mode='nearest', mask_mode='nearest'),
+    dict(type='Resize', keep_ratio=True, size=(224, 224), img_mode='nearest', mask_mode='nearest'),
     dict(type='RandomRotation', angles=(-10, 10), p=0.5),
+    dict(type='Canvas', size=(224, 224)),
     dict(type='RandomFlip', p=0.5, horizontal=True, vertical=True),
     dict(type='FilterKeys'),
     dict(type='ToTensor'),
@@ -34,6 +35,16 @@ dataset = [dict(type='TxtDataset',
                 gt_root=r'D:\DB-master\dataset\ours\train_gts',
                 txt_file=r'D:\DB-master\dataset\ours\train_list.txt',
                 )]
+
+dataloader = dict(type='BaseDataloader')
+
+data = dict(
+    train=dict(
+        transforms=transforms,
+        datasets=dataset,
+        loader=dataloader,
+    ),
+)
 
 norm_cfg = dict(type='BN')
 model = dict(
@@ -186,19 +197,38 @@ model = dict(
 )
 
 criterion = [
-    dict(type='DiceLoss', pred_map='binary_map', gt_map='', gt_mask='', weight=0.1),
-    dict(type='SmoothL1Loss', pred_map='thresh_map', gt_map='', gt_mask='', weight=0.1),
-    dict(type='DiceLoss', pred_map='thresh_binary_map', gt_map='', gt_mask='', weight=0.1),
+    dict(type='DiceLoss', eps=1e-3, pred_map='binary_map', gt_map='seg_map_label', gt_mask='seg_mask_label',
+         loss_weight=0.1),
+    dict(type='DiceLoss', eps=1e-3, pred_map='thresh_map', gt_map='boarder_map_label', gt_mask='boarder_mask_label',
+         loss_weight=0.1),
+    dict(type='DiceLoss', eps=1e-3, pred_map='thresh_binary_map', gt_map='seg_map_label', gt_mask='seg_mask_label',
+         loss_weight=0.1),
 ]
 
-postprocess = dict(
-    train=dict(
-
-    ),
-    val=dict(
-
-    ),
-    test=dict(
-
-    ),
+# postprocess = dict(
+#     train=dict(
+#
+#     ),
+#     val=dict(
+#
+#     ),
+#     test=dict(
+#
+#     ),
+# )
+optimizer = dict(type='Adam', lr=0.001)
+lr_scheduler = dict(type='StepLR', niter_per_epoch=100000, max_epochs=3, milestones=[100000, 200000])
+resume=None
+# 8. runner
+max_iterations = 300000
+runner = dict(
+    type='Runner',
+    epochs=20,
+    iterations=max_iterations,
+    trainval_ratio=2000,
+    snapshot_interval=20000,
+    grad_clip=0,
 )
+
+# 9. device
+gpu_id = '0'

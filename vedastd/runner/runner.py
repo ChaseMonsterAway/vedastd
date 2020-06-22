@@ -21,26 +21,25 @@ class Runner(object):
     """
 
     def __init__(self,
+                 epochs,
                  loader,
                  model,
-                 converter,
                  criterion,
-                 metric,
                  optim,
                  lr_scheduler,
                  iterations,
                  workdir,
+                 metric=None,
                  start_iters=0,
                  trainval_ratio=1,
                  snapshot_interval=1,
                  gpu=True,
                  test_cfg=None,
                  test_mode=False,
-                 need_text=False,
                  grad_clip=0):
+        self.epochs = epochs
         self.loader = loader
         self.model = model
-        self.converter = converter
         self.criterion = criterion
         self.metric = metric
         self.optim = optim
@@ -53,7 +52,6 @@ class Runner(object):
         self.gpu = gpu
         self.test_cfg = test_cfg
         self.test_mode = test_mode
-        self.need_text = need_text
         self.grad_clip = grad_clip
         self.best_norm = 0
         self.best_acc = 0
@@ -63,27 +61,23 @@ class Runner(object):
         if self.test_mode:
             self.test_epoch()
         else:
-            self.metric.reset()
             logger.info('Start train...')
-            for iteration in range(self.start_iters, self.iterations):
-                img, label = self.loader['train'].get_batch
-                self.train_batch(img, label)
-                if self.lr_scheduler:
-                    self.lr_scheduler.step()
-                    self.c_iter = self.iter + 1
-                else:
-                    self.c_iter = iteration + 1
-
-                if self.trainval_ratio > 0 \
-                        and (iteration + 1) % self.trainval_ratio == 0 \
-                        and self.loader.get('val'):
-                    self.validate_epoch()
-                    self.metric.reset()
-                if (iteration + 1) % self.snapshot_interval == 0:
-                    self.save_model(out_dir=self.workdir,
-                                    filename=f'iter{iteration + 1}.pth',
-                                    iteration=iteration,
-                                    )
+            for epoch in range(self.epochs):
+                for iters, batch in enumerate(self.loader['train']):
+                    self.c_iter = iters
+                    self.train_batch(batch)
+                    if self.lr_scheduler:
+                        self.lr_scheduler.step()
+                    # if self.trainval_ratio > 0 \
+                    #         and (iters + 1) % self.trainval_ratio == 0 \
+                    #         and self.loader.get('val'):
+                    #     self.validate_epoch()
+                        # self.metric.reset()
+                    # if (iters + 1) % self.snapshot_interval == 0:
+                    #     self.save_model(out_dir=self.workdir,
+                    #                     filename=f'iter{iters + 1}.pth',
+                    #                     iteration=iters,
+                    #                     )
 
     def validate_epoch(self):
         logger.info('Iteration %d, Start validating' % self.c_iter)
@@ -115,41 +109,28 @@ class Runner(object):
         logger.info('Test, acc %.4f, edit %s' % (self.metric.avg['acc']['true'],
                                                  self.metric.avg['edit']))
 
-    def train_batch(self, img, label):
+    def train_batch(self, batch):
         self.model.train()
-
         self.optim.zero_grad()
-
-        label_input, label_len, label_target = self.converter.train_encode(label)
+        img = batch['input']
         if self.gpu:
             img = img.cuda()
-            label_input = label_input.cuda()
-            label_target = label_target
-            label_len = label_len
-        if self.need_text:
-            pred = self.model(img, label_input)
-        else:
-            pred = self.model(img)
-        loss = self.criterion(pred, label_target, label_len, img.shape[0])
+        pred = self.model(img)
+        losses = []
 
-        loss.backward()
-        if self.grad_clip != 0:
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+        for criteron in self.criterion:
+            loss = criteron(pred, batch)
+            losses.append(loss)
+        losses = torch.stack(losses, 0).sum()
+        losses.backward()
         self.optim.step()
-
-        preds_prob = F.softmax(pred, dim=2)
-        preds_prob, pred_index = preds_prob.max(dim=2)
-        pred_str = self.converter.decode(pred_index)
-
-        self.metric.measure(pred_str, label, preds_prob)
 
         if self.c_iter % 10 == 0:
             logger.info(
-                'Train, Iter %d, LR %s, Loss %.4f, acc %.4f, edit_distance %s' %
-                (self.c_iter, self.lr, loss.item(), self.metric.avg['acc']['true'],
-                 self.metric.avg['edit']))
+                'Train, Iter %d, LR %s, Loss %.4f' %
+                (self.c_iter, self.lr, losses.item()))
 
-            logger.info(f'\n{self.metric.predict_example_log}')
+            # logger.info(f'\n{self.metric.predict_example_log}')
 
     def validate_batch(self, img, label):
         self.model.eval()

@@ -1,0 +1,222 @@
+2020-06-23 16:42:20,166 - INFO - Assemble, Step 1, Build Dataset
+2020-06-23 16:42:20,167 - INFO - current dataset length is 1 in D:\DB-master\dataset\ours\train_images
+2020-06-23 16:42:20,168 - INFO - current dataset length is 1 in D:\DB-master\dataset\ours\train_images
+2020-06-23 16:42:20,168 - INFO - Assemble, Step 2, Build Dataloader
+2020-06-23 16:42:20,168 - INFO - Assemble, Step 3, Build Model
+2020-06-23 16:42:20,301 - INFO - ResNet init weights from pretreain
+2020-06-23 16:42:20,418 - INFO - GFPN init weights
+2020-06-23 16:42:20,453 - INFO - Using GPU 0
+2020-06-23 16:42:21,442 - INFO - Assemble, Step 5, Build Criterion
+2020-06-23 16:42:21,443 - INFO - Assemble, Step 6, Build Optimizer
+2020-06-23 16:42:21,445 - INFO - Assemble, Step 7, Build LR scheduler
+2020-06-23 16:42:21,445 - INFO - Assemble, Step 8, Build Runner
+2020-06-23 16:42:21,446 - INFO - Start train...
+2020-06-23 16:42:24,549 - INFO - Iteration 1, Start validating
+2020-06-23 16:43:48,943 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:00,929 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:00,930 - INFO - Train, Iter 10, LR [0.001] loss 0.184655100107193
+2020-06-23 16:44:00,930 - INFO - bce:	0.1047055646777153
+2020-06-23 16:44:00,931 - INFO - mask l1:	0.07282161712646484
+2020-06-23 16:44:00,931 - INFO - dice loss:	0.007127922959625721
+2020-06-23 16:44:01,105 - INFO - Iteration 11, Start validating
+2020-06-23 16:44:06,508 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[9.4216613119e-312]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:08,422 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.6375325271697535]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[64.0, 82.0], [620.0, 82.0], [620.0, 223.0], [64.0, 223.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:08,422 - INFO - Train, Iter 20, LR [0.001] loss 0.05191154032945633
+2020-06-23 16:44:08,423 - INFO - bce:	0.014280189760029316
+2020-06-23 16:44:08,423 - INFO - mask l1:	0.032284028828144073
+2020-06-23 16:44:08,423 - INFO - dice loss:	0.005347323603928089
+2020-06-23 16:44:08,604 - INFO - Iteration 21, Start validating
+2020-06-23 16:44:08,722 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:11,814 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.6386812344259153]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[65.0, 82.0], [620.0, 82.0], [620.0, 223.0], [65.0, 223.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:11,815 - INFO - Train, Iter 30, LR [0.001] loss 0.028539786115288734
+2020-06-23 16:44:11,815 - INFO - bce:	0.005746872629970312
+2020-06-23 16:44:11,815 - INFO - mask l1:	0.01878715306520462
+2020-06-23 16:44:11,816 - INFO - dice loss:	0.004005759954452515
+2020-06-23 16:44:11,989 - INFO - Iteration 31, Start validating
+2020-06-23 16:44:13,539 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:15,467 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.671909659205485]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[67.0, 85.0], [618.0, 85.0], [618.0, 220.0], [67.0, 220.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:15,467 - INFO - Train, Iter 40, LR [0.001] loss 0.02054649591445923
+2020-06-23 16:44:15,467 - INFO - bce:	0.002895066747441888
+2020-06-23 16:44:15,468 - INFO - mask l1:	0.012674889527261257
+2020-06-23 16:44:15,468 - INFO - dice loss:	0.004976540803909302
+2020-06-23 16:44:15,647 - INFO - Iteration 41, Start validating
+2020-06-23 16:44:16,852 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:18,792 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.671909659205485]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[67.0, 85.0], [618.0, 85.0], [618.0, 220.0], [67.0, 220.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:18,792 - INFO - Train, Iter 50, LR [0.001] loss 0.01610914058983326
+2020-06-23 16:44:18,792 - INFO - bce:	0.001873124041594565
+2020-06-23 16:44:18,792 - INFO - mask l1:	0.011241151951253414
+2020-06-23 16:44:18,793 - INFO - dice loss:	0.0029948651790618896
+2020-06-23 16:44:18,961 - INFO - Iteration 51, Start validating
+2020-06-23 16:44:20,677 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:22,609 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.6731313131313131]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[67.0, 85.0], [617.0, 85.0], [617.0, 220.0], [67.0, 220.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:22,610 - INFO - Train, Iter 60, LR [0.001] loss 0.017413325607776642
+2020-06-23 16:44:22,610 - INFO - bce:	0.001261764788068831
+2020-06-23 16:44:22,610 - INFO - mask l1:	0.012821795418858528
+2020-06-23 16:44:22,611 - INFO - dice loss:	0.0033297657500952482
+2020-06-23 16:44:22,782 - INFO - Iteration 61, Start validating
+2020-06-23 16:44:23,700 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:25,634 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.6731313131313131]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[67.0, 85.0], [617.0, 85.0], [617.0, 220.0], [67.0, 220.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:25,634 - INFO - Train, Iter 70, LR [0.0009] loss 0.019087329506874084
+2020-06-23 16:44:25,634 - INFO - bce:	0.0008332874858751893
+2020-06-23 16:44:25,635 - INFO - mask l1:	0.01583544723689556
+2020-06-23 16:44:25,635 - INFO - dice loss:	0.0024185955990105867
+2020-06-23 16:44:25,810 - INFO - Iteration 71, Start validating
+2020-06-23 16:44:28,484 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:30,581 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.6731313131313131]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[67.0, 85.0], [617.0, 85.0], [617.0, 220.0], [67.0, 220.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:30,582 - INFO - Train, Iter 80, LR [0.0009] loss 0.01905088685452938
+2020-06-23 16:44:30,582 - INFO - bce:	0.0006739142700098455
+2020-06-23 16:44:30,583 - INFO - mask l1:	0.01567843183875084
+2020-06-23 16:44:30,583 - INFO - dice loss:	0.002698540687561035
+2020-06-23 16:44:30,762 - INFO - Iteration 81, Start validating
+2020-06-23 16:44:32,453 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:34,391 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.6731313131313131]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[67.0, 85.0], [617.0, 85.0], [617.0, 220.0], [67.0, 220.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:34,392 - INFO - Train, Iter 90, LR [0.0009] loss 0.015519918873906136
+2020-06-23 16:44:34,392 - INFO - bce:	0.00048639465239830315
+2020-06-23 16:44:34,392 - INFO - mask l1:	0.012757228687405586
+2020-06-23 16:44:34,392 - INFO - dice loss:	0.0022762955632060766
+2020-06-23 16:44:34,563 - INFO - Iteration 91, Start validating
+2020-06-23 16:44:36,564 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 16:44:38,500 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0], [0.6731313131313131]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [[[67.0, 85.0], [617.0, 85.0], [617.0, 220.0], [67.0, 220.0]]], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [0], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 1 (1 don't care)\n"}]
+2020-06-23 16:44:38,500 - INFO - Train, Iter 100, LR [0.0009] loss 0.012628747150301933
+2020-06-23 16:44:38,500 - INFO - bce:	0.00042000619578175247
+2020-06-23 16:44:38,501 - INFO - mask l1:	0.009891807101666927
+2020-06-23 16:44:38,501 - INFO - dice loss:	0.002316933823749423
+2020-06-23 16:44:38,670 - INFO - Iteration 101, Start validating
+2020-06-23 16:44:51,028 - INFO - EVAL!!! 
+ [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[599,   1],
+        [658,   1],
+        [658,  49],
+        [599,  49]], dtype=torch.int32), tensor([[ 87, 103],
+        [597, 103],
+        [597, 201],
+        [ 87, 201]], dtype=torch.int32)], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [1], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 2 (1 don't care)\nDET polygons: 0\n"}]

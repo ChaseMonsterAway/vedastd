@@ -53,12 +53,6 @@ class FilterKeys:
         keys = list(data.keys())
 
         for key in keys:
-            # if self.need_keys is None:
-            #     if 'input' in key or 'label' in key:
-            #         continue
-            #     else:
-            #         data.pop(key)
-            # else:
             if key not in self.need_keys:
                 data.pop(key)
 
@@ -391,24 +385,25 @@ class Resize:
         self.img_mode = img_mode
         self.mask_mode = mask_mode
 
-    def _get_target_size(self, image):
+    def get_target_size(self, image):
         h, w = image.shape[:2]
         if self.keep_ratio:
             ratio = min(self.h / h, self.w / w)
             target_size = int(h * ratio), int(w * ratio)
         else:
             target_size = self.h, self.w
-        return target_size
+            ratio = None
+        return target_size, ratio
 
     def _resize(self, image, mode):
         ndims = image.ndim
-        target_size = self._get_target_size(image)
+        target_size, ratio = self.get_target_size(image)
         new_image = cv2.resize(image, target_size[::-1], interpolation=CV2_MODE[mode])
 
         if new_image.ndim != ndims:
             new_image = new_image[:, :, np.newaxis]
 
-        return new_image
+        return new_image, ratio
 
     def __call__(self, data):
         mask_type_lists = data['mask_type']
@@ -423,12 +418,13 @@ class Resize:
             if isinstance(values, list):
                 temp_list = []
                 for value in values:
-                    new_img = self._resize(value, mode)
+                    new_img, ratio = self._resize(value, mode)
                     temp_list.append(new_img)
                 data[key] = temp_list
             else:
-                new_img = self._resize(values, mode)
+                new_img, ratio = self._resize(values, mode)
                 data[key] = new_img
+        data['ratio'] = ratio
 
         return data
 
@@ -446,7 +442,7 @@ class KeepLongResize(Resize):
         ratio = min(long_edge / max(h, w), short_edge / min(h, w))
         target_size = int(h * ratio), int(w * ratio)
 
-        return target_size
+        return target_size, ratio
 
 
 @TRANSFORMS.register_module

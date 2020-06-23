@@ -1,0 +1,28 @@
+2020-06-23 14:57:34,938 - INFO - Assemble, Step 1, Build Dataset
+2020-06-23 14:57:34,939 - INFO - current dataset length is 1 in D:\DB-master\dataset\ours\train_images
+2020-06-23 14:57:34,939 - INFO - Assemble, Step 2, Build Dataloader
+2020-06-23 14:57:34,939 - INFO - Assemble, Step 3, Build Model
+2020-06-23 14:57:35,065 - INFO - ResNet init weights from pretreain
+2020-06-23 14:57:35,191 - INFO - GFPN init weights
+2020-06-23 14:57:35,230 - INFO - Using GPU 0
+2020-06-23 14:57:36,210 - INFO - Assemble, Step 5, Build Criterion
+2020-06-23 14:57:36,210 - INFO - Assemble, Step 6, Build Optimizer
+2020-06-23 14:57:36,212 - INFO - Assemble, Step 7, Build LR scheduler
+2020-06-23 14:57:36,212 - INFO - Assemble, Step 8, Build Runner
+2020-06-23 14:57:36,213 - INFO - Start train...
+2020-06-23 14:57:42,013 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 0\n'}]
+2020-06-23 14:57:42,014 - INFO - Train, Iter 10, LR [0.001] loss 0.3226993978023529
+2020-06-23 14:57:42,014 - INFO - bce:	0.218109130859375
+2020-06-23 14:57:42,015 - INFO - mask l1:	0.0844636932015419
+2020-06-23 14:57:42,015 - INFO - dice loss:	0.020126575604081154
+2020-06-23 15:00:00,080 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[204.0, 51.0], [634.0, 51.0], [634.0, 125.0], [204.0, 125.0]]], 'gtCare': 1, 'detCare': 1, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 1\n'}]
+2020-06-23 15:00:00,081 - INFO - Train, Iter 20, LR [0.001] loss 0.10518468171358109
+2020-06-23 15:00:00,081 - INFO - bce:	0.0593644455075264
+2020-06-23 15:00:00,081 - INFO - mask l1:	0.036704353988170624
+2020-06-23 15:00:00,081 - INFO - dice loss:	0.009115881286561489

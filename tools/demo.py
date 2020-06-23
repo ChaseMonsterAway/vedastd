@@ -14,7 +14,6 @@ from vedastd.utils.config import Config
 from vedastd.utils.checkpoint import load_checkpoint
 from vedastd.models import build_model
 from vedastd.datasets.transforms import build_transform
-from vedastd.converter import build_converter
 
 
 def parse_cfg(cfg_fp):

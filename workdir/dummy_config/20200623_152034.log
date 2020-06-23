@@ -1,0 +1,20 @@
+2020-06-23 15:20:34,945 - INFO - Assemble, Step 1, Build Dataset
+2020-06-23 15:20:34,948 - INFO - current dataset length is 1 in D:\DB-master\dataset\ours\train_images
+2020-06-23 15:20:34,948 - INFO - Assemble, Step 2, Build Dataloader
+2020-06-23 15:20:34,949 - INFO - Assemble, Step 3, Build Model
+2020-06-23 15:20:35,084 - INFO - ResNet init weights from pretreain
+2020-06-23 15:20:35,220 - INFO - GFPN init weights
+2020-06-23 15:20:35,261 - INFO - Using GPU 0
+2020-06-23 15:20:36,259 - INFO - Assemble, Step 5, Build Criterion
+2020-06-23 15:20:36,259 - INFO - Assemble, Step 6, Build Optimizer
+2020-06-23 15:20:36,261 - INFO - Assemble, Step 7, Build LR scheduler
+2020-06-23 15:20:36,261 - INFO - Assemble, Step 8, Build Runner
+2020-06-23 15:20:36,262 - INFO - Start train...
+2020-06-23 15:20:39,066 - INFO - [{'precision': 1.0, 'recall': 1.0, 'hmean': 1.0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [], 'gtCare': 0, 'detCare': 0, 'gtDontCare': [0], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': "GT polygons: 1 (1 don't care)\nDET polygons: 0\n"}]
+2020-06-23 15:20:39,066 - INFO - Train, Iter 10, LR [0.001] loss 0.32891082763671875
+2020-06-23 15:20:39,066 - INFO - bce:	0.22627434134483337
+2020-06-23 15:20:39,066 - INFO - mask l1:	0.08255348354578018
+2020-06-23 15:20:39,067 - INFO - dice loss:	0.020082999020814896

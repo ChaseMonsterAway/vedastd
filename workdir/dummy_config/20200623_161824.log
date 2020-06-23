@@ -1,0 +1,14 @@
+2020-06-23 16:18:24,372 - INFO - Assemble, Step 1, Build Dataset
+2020-06-23 16:18:24,373 - INFO - current dataset length is 1 in D:\DB-master\dataset\ours\train_images
+2020-06-23 16:18:24,374 - INFO - current dataset length is 1 in D:\DB-master\dataset\ours\train_images
+2020-06-23 16:18:24,374 - INFO - Assemble, Step 2, Build Dataloader
+2020-06-23 16:18:24,374 - INFO - Assemble, Step 3, Build Model
+2020-06-23 16:18:24,503 - INFO - ResNet init weights from pretreain
+2020-06-23 16:18:24,815 - INFO - GFPN init weights
+2020-06-23 16:18:24,856 - INFO - Using GPU 0
+2020-06-23 16:18:25,868 - INFO - Assemble, Step 5, Build Criterion
+2020-06-23 16:18:25,869 - INFO - Assemble, Step 6, Build Optimizer
+2020-06-23 16:18:25,870 - INFO - Assemble, Step 7, Build LR scheduler
+2020-06-23 16:18:25,890 - INFO - Assemble, Step 8, Build Runner
+2020-06-23 16:18:25,891 - INFO - Start train...
+2020-06-23 16:18:26,779 - INFO - Iteration 1, Start validating

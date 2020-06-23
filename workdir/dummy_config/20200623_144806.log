@@ -1,0 +1,156 @@
+2020-06-23 14:48:06,667 - INFO - Assemble, Step 1, Build Dataset
+2020-06-23 14:48:06,668 - INFO - current dataset length is 1 in D:\DB-master\dataset\ours\train_images
+2020-06-23 14:48:06,668 - INFO - Assemble, Step 2, Build Dataloader
+2020-06-23 14:48:06,668 - INFO - Assemble, Step 3, Build Model
+2020-06-23 14:48:06,803 - INFO - ResNet init weights from pretreain
+2020-06-23 14:48:06,931 - INFO - GFPN init weights
+2020-06-23 14:48:06,976 - INFO - Using GPU 0
+2020-06-23 14:48:07,974 - INFO - Assemble, Step 5, Build Criterion
+2020-06-23 14:48:07,974 - INFO - Assemble, Step 6, Build Optimizer
+2020-06-23 14:48:07,976 - INFO - Assemble, Step 7, Build LR scheduler
+2020-06-23 14:48:07,976 - INFO - Assemble, Step 8, Build Runner
+2020-06-23 14:48:07,977 - INFO - Start train...
+2020-06-23 14:48:22,159 - INFO - [{'precision': 0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [], 'gtCare': 1, 'detCare': 0, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 0\n'}]
+2020-06-23 14:48:22,159 - INFO - Train, Iter 10, LR [0.001] loss 0.35323184728622437
+2020-06-23 14:48:22,160 - INFO - bce:	0.25194498896598816
+2020-06-23 14:48:22,160 - INFO - mask l1:	0.08212842792272568
+2020-06-23 14:48:22,160 - INFO - dice loss:	0.019158411771059036
+2020-06-23 14:48:25,150 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[63.0, 30.0], [201.0, 30.0], [201.0, 73.0], [63.0, 73.0]]], 'gtCare': 1, 'detCare': 1, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 1\n'}]
+2020-06-23 14:48:25,150 - INFO - Train, Iter 20, LR [0.001] loss 0.1526944935321808
+2020-06-23 14:48:25,151 - INFO - bce:	0.0967918410897255
+2020-06-23 14:48:25,151 - INFO - mask l1:	0.04278650879859924
+2020-06-23 14:48:25,151 - INFO - dice loss:	0.013116151094436646
+2020-06-23 14:48:26,861 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[63.0, 31.0], [198.0, 31.0], [198.0, 70.0], [63.0, 70.0]]], 'gtCare': 1, 'detCare': 1, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 1\n'}]
+2020-06-23 14:48:26,862 - INFO - Train, Iter 30, LR [0.001] loss 0.09569299221038818
+2020-06-23 14:48:26,862 - INFO - bce:	0.06399403512477875
+2020-06-23 14:48:26,863 - INFO - mask l1:	0.02274644561111927
+2020-06-23 14:48:26,863 - INFO - dice loss:	0.008952516131103039
+2020-06-23 14:48:28,061 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[64.0, 31.0], [198.0, 31.0], [198.0, 70.0], [64.0, 70.0]]], 'gtCare': 1, 'detCare': 1, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 1\n'}]
+2020-06-23 14:48:28,061 - INFO - Train, Iter 40, LR [0.001] loss 0.06089670583605766
+2020-06-23 14:48:28,062 - INFO - bce:	0.03760381042957306
+2020-06-23 14:48:28,062 - INFO - mask l1:	0.015231277793645859
+2020-06-23 14:48:28,062 - INFO - dice loss:	0.008061617612838745
+2020-06-23 14:48:29,950 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[63.0, 30.0], [199.0, 30.0], [199.0, 72.0], [63.0, 72.0]]], 'gtCare': 1, 'detCare': 1, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 1\n'}]
+2020-06-23 14:48:29,950 - INFO - Train, Iter 50, LR [0.001] loss 0.08486708998680115
+2020-06-23 14:48:29,951 - INFO - bce:	0.05865074694156647
+2020-06-23 14:48:29,951 - INFO - mask l1:	0.01832040213048458
+2020-06-23 14:48:29,951 - INFO - dice loss:	0.0078959409147501
+2020-06-23 14:48:36,367 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[53.0, 86.0], [68.0, 86.0], [68.0, 120.0], [53.0, 120.0]], [[64.0, 31.0], [198.0, 31.0], [198.0, 70.0], [64.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:36,367 - INFO - Train, Iter 60, LR [0.001] loss 0.05466232821345329
+2020-06-23 14:48:36,368 - INFO - bce:	0.0348794125020504
+2020-06-23 14:48:36,368 - INFO - mask l1:	0.012125824578106403
+2020-06-23 14:48:36,368 - INFO - dice loss:	0.007657092995941639
+2020-06-23 14:48:41,023 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 87.0], [66.0, 87.0], [66.0, 117.0], [55.0, 117.0]], [[64.0, 31.0], [198.0, 31.0], [198.0, 70.0], [64.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:41,023 - INFO - Train, Iter 70, LR [0.0009] loss 0.040913328528404236
+2020-06-23 14:48:41,024 - INFO - bce:	0.018920598551630974
+2020-06-23 14:48:41,024 - INFO - mask l1:	0.0163200031965971
+2020-06-23 14:48:41,024 - INFO - dice loss:	0.005672729108482599
+2020-06-23 14:48:43,183 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[53.0, 87.0], [67.0, 87.0], [67.0, 117.0], [53.0, 117.0]], [[65.0, 31.0], [198.0, 31.0], [198.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:43,183 - INFO - Train, Iter 80, LR [0.0009] loss 0.031002214178442955
+2020-06-23 14:48:43,184 - INFO - bce:	0.010071913711726665
+2020-06-23 14:48:43,184 - INFO - mask l1:	0.016427014023065567
+2020-06-23 14:48:43,184 - INFO - dice loss:	0.004503285977989435
+2020-06-23 14:48:45,165 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 116.0], [55.0, 116.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:45,166 - INFO - Train, Iter 90, LR [0.0009] loss 0.02235257439315319
+2020-06-23 14:48:45,166 - INFO - bce:	0.005135496612638235
+2020-06-23 14:48:45,166 - INFO - mask l1:	0.013278861530125141
+2020-06-23 14:48:45,167 - INFO - dice loss:	0.003938216250389814
+2020-06-23 14:48:47,134 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 116.0], [55.0, 116.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:47,135 - INFO - Train, Iter 100, LR [0.0009] loss 0.01533929631114006
+2020-06-23 14:48:47,135 - INFO - bce:	0.0030230225529521704
+2020-06-23 14:48:47,135 - INFO - mask l1:	0.008891796693205833
+2020-06-23 14:48:47,136 - INFO - dice loss:	0.003424477530643344
+2020-06-23 14:48:51,135 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 116.0], [55.0, 116.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:51,136 - INFO - Train, Iter 110, LR [0.0009] loss 0.015090259723365307
+2020-06-23 14:48:51,136 - INFO - bce:	0.0020898457150906324
+2020-06-23 14:48:51,136 - INFO - mask l1:	0.00959850288927555
+2020-06-23 14:48:51,136 - INFO - dice loss:	0.0034019113518297672
+2020-06-23 14:48:53,582 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 115.0], [55.0, 115.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:53,583 - INFO - Train, Iter 120, LR [0.0009] loss 0.013286254368722439
+2020-06-23 14:48:53,584 - INFO - bce:	0.0015675121685490012
+2020-06-23 14:48:53,584 - INFO - mask l1:	0.009013323113322258
+2020-06-23 14:48:53,584 - INFO - dice loss:	0.0027054192032665014
+2020-06-23 14:48:55,533 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 115.0], [55.0, 115.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:55,534 - INFO - Train, Iter 130, LR [0.0009] loss 0.02019306644797325
+2020-06-23 14:48:55,534 - INFO - bce:	0.001366554875858128
+2020-06-23 14:48:55,534 - INFO - mask l1:	0.016060443595051765
+2020-06-23 14:48:55,535 - INFO - dice loss:	0.0027660669293254614
+2020-06-23 14:48:57,439 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 115.0], [55.0, 115.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:57,439 - INFO - Train, Iter 140, LR [0.0009] loss 0.011549925431609154
+2020-06-23 14:48:57,440 - INFO - bce:	0.001130116987042129
+2020-06-23 14:48:57,440 - INFO - mask l1:	0.007845222018659115
+2020-06-23 14:48:57,440 - INFO - dice loss:	0.002574587007984519
+2020-06-23 14:48:59,261 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 115.0], [55.0, 115.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:48:59,262 - INFO - Train, Iter 150, LR [0.0009] loss 0.013641812838613987
+2020-06-23 14:48:59,262 - INFO - bce:	0.0008826368139125407
+2020-06-23 14:48:59,262 - INFO - mask l1:	0.010336801409721375
+2020-06-23 14:48:59,263 - INFO - dice loss:	0.002422374440357089
+2020-06-23 14:49:00,958 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 115.0], [55.0, 115.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:49:00,959 - INFO - Train, Iter 160, LR [0.0009] loss 0.01261934544891119
+2020-06-23 14:49:00,960 - INFO - bce:	0.0007199684041552246
+2020-06-23 14:49:00,960 - INFO - mask l1:	0.009405715391039848
+2020-06-23 14:49:00,960 - INFO - dice loss:	0.0024936615955084562
+2020-06-23 14:49:03,152 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 115.0], [55.0, 115.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:49:03,152 - INFO - Train, Iter 170, LR [0.0009] loss 0.009594653733074665
+2020-06-23 14:49:03,168 - INFO - bce:	0.0006248131394386292
+2020-06-23 14:49:03,168 - INFO - mask l1:	0.00653214193880558
+2020-06-23 14:49:03,168 - INFO - dice loss:	0.0024376988876610994
+2020-06-23 14:49:05,662 - INFO - [{'precision': 0.0, 'recall': 0.0, 'hmean': 0, 'pairs': [], 'iouMat': [[0.0, 0.0]], 'gtPolPoints': [tensor([[  2., 270.],
+        [ 29., 270.],
+        [ 29., 373.],
+        [  2., 373.]])], 'detPolPoints': [[[55.0, 88.0], [66.0, 88.0], [66.0, 115.0], [55.0, 115.0]], [[65.0, 31.0], [197.0, 31.0], [197.0, 70.0], [65.0, 70.0]]], 'gtCare': 1, 'detCare': 2, 'gtDontCare': [], 'detDontCare': [], 'detMatched': 0, 'evaluationLog': 'GT polygons: 1\nDET polygons: 2\n'}]
+2020-06-23 14:49:05,663 - INFO - Train, Iter 180, LR [0.0009] loss 0.012198579497635365
+2020-06-23 14:49:05,663 - INFO - bce:	0.0005394919426180422
+2020-06-23 14:49:05,663 - INFO - mask l1:	0.009253784082829952
+2020-06-23 14:49:05,663 - INFO - dice loss:	0.0024053037632256746

@@ -93,7 +93,8 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
     logger.info('Assemble, Step 7, Build LR scheduler')
     # 7. lr scheduler
     if cfg.get('lr_scheduler'):
-        lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'], dict(optimizer=optim))
+        lr_scheduler = build_lr_scheduler(cfg['lr_scheduler'],
+                                          dict(optimizer=optim, niter_per_epoch=len(loader['train'])))
     else:
         lr_scheduler = None
 

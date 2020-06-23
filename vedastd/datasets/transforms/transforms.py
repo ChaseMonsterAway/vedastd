@@ -1,11 +1,10 @@
 import random
-import math
 from functools import partial
 
-import torch
-import pyclipper
-import numpy as np
 import cv2
+import numpy as np
+import pyclipper
+import torch
 from shapely.geometry import Polygon
 
 from .registry import TRANSFORMS
@@ -47,13 +46,20 @@ class Compose:
 @TRANSFORMS.register_module
 class FilterKeys:
 
+    def __init__(self, need_keys: list):
+        self.need_keys = need_keys
+
     def __call__(self, data: dict):
         keys = list(data.keys())
 
         for key in keys:
-            if 'input' in key or 'label' in key:
-                continue
-            else:
+            # if self.need_keys is None:
+            #     if 'input' in key or 'label' in key:
+            #         continue
+            #     else:
+            #         data.pop(key)
+            # else:
+            if key not in self.need_keys:
                 data.pop(key)
 
         return data
@@ -104,10 +110,11 @@ class MakeShrinkMap:
 
             shrink_maps.append(current_shrink_map)
             mask_maps.append(current_mask_map)
-        data[self.prefix + '_map_label'] = shrink_maps
-        data[self.prefix + '_mask_label'] = mask_maps
-        data['mask_type'].append(self.prefix + '_map_label')
-        data['mask_type'].append(self.prefix + '_mask_label')
+        # TO DO, not list, but np.ndarray
+        data[self.prefix + '_map'] = shrink_maps
+        data[self.prefix + '_mask'] = mask_maps
+        data['mask_type'].append(self.prefix + '_map')
+        data['mask_type'].append(self.prefix + '_mask')
 
         return data
 
@@ -125,21 +132,22 @@ class MakeBoarderMap:
         image = data['input']
         polygons = data['polygon']
         tags = data['tags']
-        canvas = np.zeros(image.shape[:2], dtype=np.float32)
-        mask = np.zeros(image.shape[:2], dtype=np.float32)
+        h, w = image.shape[:2]
+        canvas = np.zeros((h, w, 1), dtype=np.float32)
+        mask = np.zeros((h, w, 1), dtype=np.float32)
 
         for i in range(len(polygons)):
             if not tags[i]:
                 continue
-            self.draw_border_map(polygons[i], canvas, mask=mask)
-        canvas = canvas * (self.thresh_max - self.thresh_min) + self.thresh_min
-        data['boarder_map_label'] = canvas
-        data['boarder_mask_label'] = mask
+            self.draw_border_map(polygons[i], canvas[:, :, 0], mask=mask[:, :, 0])
+            canvas = canvas * (self.thresh_max - self.thresh_min) + self.thresh_min
+            data['boarder_map'] = canvas
+            data['boarder_mask'] = mask
 
-        data['mask_type'].append('boarder_map_label')
-        data['mask_type'].append('boarder_mask_label')
+            data['mask_type'].append('boarder_map')
+            data['mask_type'].append('boarder_mask')
 
-        return data
+            return data
 
     def draw_border_map(self, polygon, canvas, mask):
         polygon = np.array(polygon)
@@ -275,12 +283,14 @@ class RandomFlip:
         self.h = horizontal
         self.v = vertical
 
-    def _random_horizontal_flip(self, img, flag=False):
+    @staticmethod
+    def _random_horizontal_flip(img, flag=False):
         if flag:
             img = np.flip(img, axis=1).copy()
         return img
 
-    def _random_vertical_flip(self, img, flag=False):
+    @staticmethod
+    def _random_vertical_flip(img, flag=False):
         if flag:
             img = np.flip(img, axis=0).copy()
         return img
@@ -404,7 +414,6 @@ class Resize:
         mask_type_lists = data['mask_type']
         image_type_lists = data['image_type']
         for key, values in data.items():
-            print(key)
             if key in mask_type_lists:
                 mode = self.mask_mode
             elif key in image_type_lists:
@@ -443,6 +452,9 @@ class KeepLongResize(Resize):
 @TRANSFORMS.register_module
 class ToTensor:
 
+    def __init__(self, keys: list):
+        self.keys = keys
+
     @staticmethod
     def to_tensor(value):
         if value.ndim == 3:
@@ -455,6 +467,8 @@ class ToTensor:
 
     def __call__(self, data):
         for key, values in data.items():
+            if key not in self.keys:
+                continue
             if isinstance(values, list):
                 temp_list = []
                 for value in values:
@@ -468,30 +482,23 @@ class ToTensor:
 
 @TRANSFORMS.register_module
 class Canvas:
-    def __init__(self, size, img_mode='cubic', mask_mode='nearest'):
+    def __init__(self, size, img_v=255, mask_v=255):
         self.h = size[0]
         self.w = size[1]
-        self.img_mode = img_mode
-        self.mask_mode = mask_mode
+        self.img_v = img_v
+        self.mask_v = mask_v
 
-    def _get_target_size(self, image):
-        h, w = image.shape[:2]
-        if self.keep_ratio:
-            ratio = min(self.h / h, self.w / w)
-            target_size = int(h * ratio), int(w * ratio)
-        else:
-            target_size = self.h, self.w
-        return target_size
-
-    def _canvas(self, image):
+    def _canvas(self, image, v):
         ndims = image.ndim
         if ndims == 3:
             h, w, c = image.shape
             new_canvas = np.zeros((self.h, self.w, c))
+            new_canvas.fill(v)
             new_canvas[:h, :w, :] = image
         else:
             h, w = image.shape
             new_canvas = np.zeros((self.h, self.w))
+            new_canvas.fill(v)
             new_canvas[:h, :w] = image
 
         return new_canvas
@@ -500,21 +507,20 @@ class Canvas:
         mask_type_lists = data['mask_type']
         image_type_lists = data['image_type']
         for key, values in data.items():
-            print(key)
             if key in mask_type_lists:
-                mode = self.mask_mode
+                v = self.mask_v
             elif key in image_type_lists:
-                mode = self.img_mode
+                v = self.img_v
             else:
                 continue
             if isinstance(values, list):
                 temp_list = []
                 for value in values:
-                    new_img = self._canvas(value)
+                    new_img = self._canvas(value, v)
                     temp_list.append(new_img)
                 data[key] = temp_list
             else:
-                new_img = self._canvas(values)
+                new_img = self._canvas(values, v)
                 data[key] = new_img
 
         return data

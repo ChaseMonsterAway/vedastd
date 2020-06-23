@@ -1,3 +1,0 @@
-2020-06-22 20:02:24,281 - INFO - Assemble, Step 1, Build Dataset
-2020-06-22 20:02:24,390 - INFO - current dataset length is 567 in D:\DB-master\dataset\ours\train_images
-2020-06-22 20:02:24,390 - INFO - Assemble, Step 2, Build Dataloader

@@ -52,8 +52,10 @@ class TxtDataset(BaseDataset):
         results = dict()
         self.pre_transforms(results)
         image = cv2.imread(im_path)
+        h, w = image.shape[:2]
         results['input'] = image
         results['polygon'] = polys
+        results['shape'] = [h, w]
         results['tags'] = tags
 
         if self.transforms:

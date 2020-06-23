@@ -1,7 +1,5 @@
-import torch.nn as nn
-
-from .registry import CRITERIA
 from .base_loss import BaseLoss
+from .registry import CRITERIA
 
 
 @CRITERIA.register_module
@@ -24,6 +22,7 @@ class DiceLoss(BaseLoss):
         if pred.dim() == 4:
             pred = pred[:, 0, :, :]
             gt = gt[:, 0, :, :]
+            mask = mask[:, 0, :, :]
         assert pred.shape == gt.shape
         assert pred.shape == mask.shape
         if weights is not None:

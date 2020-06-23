@@ -1,13 +1,14 @@
-import torch
 import logging
 import os.path as osp
-import torch.nn.functional as F
-import numpy as np
 from collections.abc import Iterable
 
-from vedastd.utils.checkpoint import load_checkpoint, save_checkpoint
+import numpy as np
+import torch
+import torch.nn.functional as F
 
+from vedastd.utils.checkpoint import load_checkpoint, save_checkpoint
 from .registry import RUNNERS
+from ..postpocessor.representer import SegDetectorRepresenter
 
 np.set_printoptions(precision=4)
 
@@ -64,7 +65,7 @@ class Runner(object):
             logger.info('Start train...')
             for epoch in range(self.epochs):
                 for iters, batch in enumerate(self.loader['train']):
-                    self.c_iter = iters
+                    self.c_iter += 1
                     self.train_batch(batch)
                     if self.lr_scheduler:
                         self.lr_scheduler.step()
@@ -72,7 +73,7 @@ class Runner(object):
                     #         and (iters + 1) % self.trainval_ratio == 0 \
                     #         and self.loader.get('val'):
                     #     self.validate_epoch()
-                        # self.metric.reset()
+                    # self.metric.reset()
                     # if (iters + 1) % self.snapshot_interval == 0:
                     #     self.save_model(out_dir=self.workdir,
                     #                     filename=f'iter{iters + 1}.pth',
@@ -116,21 +117,19 @@ class Runner(object):
         if self.gpu:
             img = img.cuda()
         pred = self.model(img)
-        losses = []
 
-        for criteron in self.criterion:
-            loss = criteron(pred, batch)
-            losses.append(loss)
-        losses = torch.stack(losses, 0).sum()
-        losses.backward()
+        loss_infos = {criterion.name: criterion(pred, batch) for criterion in self.criterion}
+        loss = torch.stack(list(loss_infos.values()), 0).sum()
+
+        loss.backward()
         self.optim.step()
 
         if self.c_iter % 10 == 0:
-            logger.info(
-                'Train, Iter %d, LR %s, Loss %.4f' %
-                (self.c_iter, self.lr, losses.item()))
+            SegDetectorRepresenter().represent(batch, pred)
+            logger.info(f'Train, Iter {self.c_iter}, LR {self.lr} loss {loss.item()}')
 
-            # logger.info(f'\n{self.metric.predict_example_log}')
+            for key, value in loss_infos.items():
+                logger.info(f'{key}:\t{value}')
 
     def validate_batch(self, img, label):
         self.model.eval()

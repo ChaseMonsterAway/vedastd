@@ -13,7 +13,7 @@ logger = dict(
 )
 
 # 2. data
-batch_size = 1
+batch_size = 2
 
 # transforms
 transforms = [
@@ -23,20 +23,21 @@ transforms = [
     dict(type='MakeBoarderMap', shrink_ratio=0.4, thresh_min=0.3, thresh_max=0.7),
     dict(type='Resize', keep_ratio=True, size=(224, 224), img_mode='nearest', mask_mode='nearest'),
     dict(type='RandomRotation', angles=(-10, 10), p=0.5),
-    dict(type='Canvas', size=(224, 224)),
+    dict(type='Canvas', size=(224, 224), img_v=0, mask_v=0),
     dict(type='RandomFlip', p=0.5, horizontal=True, vertical=True),
-    dict(type='FilterKeys'),
-    dict(type='ToTensor'),
+    dict(type='FilterKeys',
+         need_keys=['seg_mask', 'seg_map', 'polygon', 'boarder_mask', 'boarder_map', 'shape', 'input', 'tags']),
+    dict(type='ToTensor', keys=['seg_mask', 'seg_map', 'polygon', 'boarder_mask', 'boarder_map', 'input']),
     dict(type='Normalize', key='input'),
 ]
 
 dataset = [dict(type='TxtDataset',
                 img_root=r'D:\DB-master\dataset\ours\train_images',
                 gt_root=r'D:\DB-master\dataset\ours\train_gts',
-                txt_file=r'D:\DB-master\dataset\ours\train_list.txt',
+                txt_file=r'D:\DB-master\dataset\ours\train.txt',
                 )]
 
-dataloader = dict(type='BaseDataloader')
+dataloader = dict(type='BaseDataloader', batch_size=2)
 
 data = dict(
     train=dict(
@@ -197,12 +198,12 @@ model = dict(
 )
 
 criterion = [
-    dict(type='DiceLoss', eps=1e-3, pred_map='binary_map', gt_map='seg_map_label', gt_mask='seg_mask_label',
-         loss_weight=0.1),
-    dict(type='DiceLoss', eps=1e-3, pred_map='thresh_map', gt_map='boarder_map_label', gt_mask='boarder_mask_label',
-         loss_weight=0.1),
-    dict(type='DiceLoss', eps=1e-3, pred_map='thresh_binary_map', gt_map='seg_map_label', gt_mask='seg_mask_label',
-         loss_weight=0.1),
+    dict(type='BalanceCrossEntropyLoss', negative_ratio=3.0, eps=1e-6, pred_map='binary_map', gt_map='seg_map',
+         gt_mask='seg_mask', loss_name='bce', loss_weight=5),
+    dict(type='MaskL1Loss', pred_map='thresh_map', gt_map='boarder_map', gt_mask='boarder_mask',
+         loss_weight=10, loss_name='mask l1'),
+    dict(type='DiceLoss', eps=1e-6, pred_map='thresh_binary_map', gt_map='seg_map', gt_mask='seg_mask',
+         loss_weight=0.1, loss_name='dice loss'),
 ]
 
 # postprocess = dict(
@@ -217,13 +218,15 @@ criterion = [
 #     ),
 # )
 optimizer = dict(type='Adam', lr=0.001)
-lr_scheduler = dict(type='StepLR', niter_per_epoch=100000, max_epochs=3, milestones=[100000, 200000])
-resume=None
+
+max_epoch = 1200
+lr_scheduler = dict(type='PolyLR', max_epochs=max_epoch)
+resume = None
 # 8. runner
 max_iterations = 300000
 runner = dict(
     type='Runner',
-    epochs=20,
+    epochs=max_epoch,
     iterations=max_iterations,
     trainval_ratio=2000,
     snapshot_interval=20000,

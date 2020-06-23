@@ -143,6 +143,47 @@ class FusionBlock(nn.Module):
             res = torch.cat(outs, 1)
         return res
 
+@BRICKS.register_module
+class UpsampleFusion(nn.Module):
+    """UpsampleFusion
+
+        Args:
+    """
+
+    def __init__(self,
+                 method,
+                 from_layers,
+                 feat_strides,
+                 upsample,
+                 common_stride=4,
+                 ):
+        super(UpsampleFusion, self).__init__()
+
+        assert method in ('add', 'concat')
+        self.method = method
+        self.from_layers = from_layers
+
+        self.blocks = nn.ModuleList()
+        for idx in range(len(from_layers)):
+            ops = nn.Sequential()
+            feat_stride = feat_strides[idx]
+            if int(feat_stride) != int(common_stride):
+                upsample['scale_factor'] = int(feat_stride / common_stride)
+                ops = build_module(upsample)
+            self.blocks.append(ops)
+
+    def forward(self, feats):
+        outs = []
+        for idx, key in enumerate(self.from_layers):
+            block = self.blocks[idx]
+            feat = feats[key]
+            out = block(feat)
+            outs.append(out)
+        if self.method == 'add':
+            res = torch.stack(outs, 0).sum(0)
+        else:
+            res = torch.cat(outs, 1)
+        return res
 
 @BRICKS.register_module
 class CollectBlock(nn.Module):

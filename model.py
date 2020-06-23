@@ -20,11 +20,12 @@ def tensor_to_img(t_img: torch.Tensor):
 
 
 def main():
-    cfg = Config.fromfile('./configs/dummy_config.py')
+    cfg = Config.fromfile('./configs/psenet_resnet50.py')
     model = build_model(cfg['model'])
     dummy_input = torch.randn((1, 3, 224, 224))
     out = model(dummy_input)
-
+    for key,value in out.items():
+        print(key, value.shape)
     print('done')
 
 

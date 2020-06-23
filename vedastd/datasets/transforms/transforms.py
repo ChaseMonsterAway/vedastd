@@ -107,7 +107,6 @@ class MakeShrinkMap:
 
                 shrink_box = np.array(shrink_box[0]).reshape(-1, 2)
                 cv2.fillPoly(current_shrink_map[:, :, 0], [shrink_box.astype(np.int32)], 1)
-
             shrink_maps.append(current_shrink_map)
             mask_maps.append(current_mask_map)
         # TO DO, not list, but np.ndarray
@@ -115,7 +114,15 @@ class MakeShrinkMap:
         data[self.prefix + '_mask'] = mask_maps
         data['mask_type'].append(self.prefix + '_map')
         data['mask_type'].append(self.prefix + '_mask')
-
+        # for id, item in enumerate(data['kernels_map']):
+        #     cv2.imshow('map',item)
+        #     cv2.waitKey()
+        """print(data[self.prefix + '_map'][0].shape)
+        cv2.imshow('map', data[self.prefix + '_map'][0])
+        cv2.waitKey()
+        print(data[self.prefix + '_map'][0].shape)
+        cv2.imshow('mask', data[self.prefix + '_mask'][0])
+        cv2.waitKey()"""
         return data
 
 
@@ -267,16 +274,6 @@ class PadIfNeeded:
 
 
 @TRANSFORMS.register_module
-class RandomCrop:
-
-    def __init__(self):
-        pass
-
-    def __call__(self, data):
-        pass
-
-
-@TRANSFORMS.register_module
 class RandomFlip:
     def __init__(self, p, horizontal, vertical):
         self.p = p
@@ -378,11 +375,140 @@ class RandomRotation(object):
             else:
                 new_img = affine(image=values, mode=mode, border_mode=border_mode, border_value=pad_value)
                 data[key] = new_img
-
+        # for item in data['kernels_mask']:
+        #     cv2.imshow('map', item)
+        #     cv2.waitKey()
+        #     print(item.shape)
         return data
 
 
 @TRANSFORMS.register_module
+class Resize:
+    def __init__(self, size, keep_ratio=False, random_scale=False, img_mode='cubic', mask_mode='nearest',
+                 max_size=1280, scale_list=(0.5, 1.0, 2.0, 3.0)):
+        self.h = size[0]
+        self.w = size[1]
+        self.keep_ratio = keep_ratio
+        self.random_scale = random_scale
+        self.img_mode = img_mode
+        self.mask_mode = mask_mode
+        self.max_size = max_size
+        self.scale_list = scale_list
+        self.random_value = None
+
+    def reset_random(self):
+        self.random_value = np.random.choice(self.scale_list)
+
+    def _get_target_size(self, image):
+        h, w = image.shape[:2]
+        if self.keep_ratio:
+            ratio = min(self.h / h, self.w / w)
+            target_size = int(h * ratio), int(w * ratio)
+        else:
+            if self.random_scale:
+                if max(h, w) > self.max_size:
+                    scale = self.max_size / max(h, w)
+                    h, w = int(h * scale), int(w * scale)
+
+                # scale = np.random.choice(self.scale_list)
+                scale = self.random_value
+                if min(h, w) * scale <= self.h:
+                    scale = (self.h + 10) * 1.0 / min(h, w)
+                target_size = int(h * scale), int(w * scale)
+            else:
+                target_size = self.h, self.w
+
+        return target_size
+
+    def _resize(self, image, mode):
+        ndims = image.ndim
+        target_size = self._get_target_size(image)
+        new_image = cv2.resize(image, target_size[::-1], interpolation=CV2_MODE[mode])
+
+        if new_image.ndim != ndims:
+            new_image = new_image[:, :, np.newaxis]
+
+        return new_image
+
+    def __call__(self, data):
+        mask_type_lists = data['mask_type']
+        image_type_lists = data['image_type']
+        self.reset_random()
+        for key, values in data.items():
+            if key in mask_type_lists:
+                mode = self.mask_mode
+            elif key in image_type_lists:
+                mode = self.img_mode
+            else:
+                continue
+            if isinstance(values, list):
+                temp_list = []
+                for value in values:
+                    new_img = self._resize(value, mode)
+                    temp_list.append(new_img)
+                data[key] = temp_list
+            else:
+                new_img = self._resize(values, mode)
+                data[key] = new_img
+        # cv2.imshow('map', data['text_map'][0])
+        # cv2.waitKey()
+        # print(data['text_map'][0].shape)
+        # cv2.imshow('mask', data['text_mask'][0])
+        # cv2.waitKey()
+        # print(data['text_mask'][0].shape)
+        # for item in data['kernels_map']:
+        #    cv2.imshow('mask', item)
+        #    cv2.waitKey()
+        #    print(item.shape)
+        return data
+
+
+@TRANSFORMS.register_module
+class RandomCrop:
+    def __init__(self, size, p=3.0 / 8.0, prefix='text'):
+        self.h = size[0]
+        self.w = size[1]
+        self.p = p
+        self.prefix = prefix
+
+    def get_crop_size(self, text_map):
+        h, w = text_map.shape[0:2]
+        if random.random() > self.p and np.max(text_map) > 0:
+            tl = np.min(np.where(text_map[1] > 0), axis=1) - (self.h, self.w)
+            tl[tl < 0] = 0
+            br = np.max(np.where(text_map[1] > 0), axis=1) - (self.h, self.w)
+            br[br < 0] = 0
+            br[0] = min(br[0], h - self.h)
+            br[1] = min(br[1], w - self.w)
+
+            i = random.randint(tl[0], br[0])
+            j = random.randint(tl[1], br[1])
+        else:
+            i = random.randint(0, h - self.h)
+            j = random.randint(0, w - self.w)
+        return i, j
+
+    def __call__(self, data):
+        mask_type_lists = data['mask_type']
+        image_type_lists = data['image_type']
+        i, j = self.get_crop_size(data[self.prefix + '_map'][0])
+
+        for key, values in data.items():
+            if key in mask_type_lists or key in image_type_lists:
+            print(key, type(values))
+            if isinstance(values, list):
+                temp_list = []
+                for value in values:
+                    new_img = self._crop(value)
+                    temp_list.append(new_img)
+                data[key] = temp_list
+            else:
+                new_img = self._resize(values)
+                data[key] = new_img
+
+
+
+"""@TRANSFORMS.register_module
 class Resize:
     def __init__(self, size, keep_ratio=False, img_mode='cubic', mask_mode='nearest'):
         self.h = size[0]
@@ -430,7 +556,7 @@ class Resize:
                 new_img = self._resize(values, mode)
                 data[key] = new_img
 
-        return data
+        return data"""
 
 
 @TRANSFORMS.register_module

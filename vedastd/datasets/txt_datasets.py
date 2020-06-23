@@ -30,7 +30,15 @@ class TxtDataset(BaseDataset):
         tag_list = []
         with open(os.path.join(self.gt_root, name + '.txt'), 'r') as f:
             for line in f.readlines():
-                line = line.split(',')
+                line = line.strip('\ufeff').split(',')
+                line[:-1] = map(int, line[:-1])
+                poly = np.array(line[:-1]).reshape(-1, 2)
+                poly_list.append(poly)
+                if line[-1][0] == '#':
+                    tag_list.append(False)
+                else:
+                    tag_list.append(True)
+                """
                 line = list(map(int, line))
                 poly = np.array(line[:-1]).reshape(-1, 2)
                 poly_list.append(poly)
@@ -38,7 +46,7 @@ class TxtDataset(BaseDataset):
                     tag_list.append(True)
                 else:
                     tag_list.append(False)
-
+                """
         return poly_list, tag_list
 
     def pre_transforms(self, result):
@@ -57,7 +65,6 @@ class TxtDataset(BaseDataset):
         results['polygon'] = polys
         results['shape'] = [h, w]
         results['tags'] = tags
-
         if self.transforms:
             results = self.transforms(results)
 

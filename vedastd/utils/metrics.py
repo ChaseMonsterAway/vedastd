@@ -1,6 +1,6 @@
 # modify from clovaai
 
-from nltk.metrics.distance import edit_distance
+#from nltk.metrics.distance import edit_distance
 
 
 class STRMeters(object):

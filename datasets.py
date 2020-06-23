@@ -21,19 +21,20 @@ def tensor_to_img(t_img: torch.Tensor):
 
 
 def main():
-    cfg = Config.fromfile('./configs/dummy_config.py')
+    cfg = Config.fromfile('./configs/psenet_resnet50.py')
     transforms = build_transform(cfg['transforms'])
-    datasets = build_datasets(cfg['dataset'], dict(transforms=transforms))[0]
+    datasets = build_datasets(cfg['dataset'], dict(transforms=transforms))
     dataloader = BaseDataloader(datasets)
     for idx, batch in enumerate(dataloader):
+        #print(idx, batch)
         # for idx in range(len(datasets)):
         #     batch = datasets[idx]
         for key, values in batch.items():
-            print(key)
+            #print(key, values)
             if isinstance(values, list):
                 for v in values:
                     cv2.imshow('%s' % key, tensor_to_img(v))
-                    # cv2.waitKey()
+                    cv2.waitKey()
             else:
                 cv2.imshow('%s' % key, tensor_to_img(values))
         cv2.waitKey()

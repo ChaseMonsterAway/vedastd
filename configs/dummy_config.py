@@ -16,19 +16,32 @@ logger = dict(
 batch_size = 2
 
 # transforms
-transforms = [
+train_transforms = [
     dict(type='MakeShrinkMap', ratios=[0.4], max_shr=20, min_text_size=8, prefix='seg'),
     dict(type='MakeShrinkMap', ratios=[1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4], max_shr=20, min_text_size=8,
          prefix='kernel'),
     dict(type='MakeBoarderMap', shrink_ratio=0.4, thresh_min=0.3, thresh_max=0.7),
-    dict(type='Resize', keep_ratio=True, size=(224, 224), img_mode='nearest', mask_mode='nearest'),
-    dict(type='RandomRotation', angles=(-10, 10), p=0.5),
-    dict(type='Canvas', size=(224, 224), img_v=0, mask_v=0),
-    dict(type='RandomFlip', p=0.5, horizontal=True, vertical=True),
+    dict(type='Resize', keep_ratio=True, size=(448, 448), img_mode='nearest', mask_mode='nearest'),
+    # dict(type='RandomRotation', angles=(-10, 10), p=0.5),
+    dict(type='Canvas', size=(448, 448), img_v=0, mask_v=0),
+    # dict(type='RandomFlip', p=0.5, horizontal=True, vertical=True),
     dict(type='FilterKeys',
-         need_keys=['seg_mask', 'seg_map', 'polygon', 'boarder_mask', 'boarder_map', 'shape', 'input', 'tags']),
-    dict(type='ToTensor', keys=['seg_mask', 'seg_map', 'polygon', 'boarder_mask', 'boarder_map', 'input']),
-    dict(type='Normalize', key='input'),
+         need_keys=['seg_mask', 'seg_map', 'polygon', 'boarder_mask', 'boarder_map', 'shape', 'input', 'tags',
+                    'ratio']),
+    dict(type='ToTensor', keys=['seg_mask', 'seg_map', 'boarder_mask', 'boarder_map', 'input']),
+    # dict(type='Normalize', key='input'),
+]
+
+test_transforms = [
+    dict(type='MakeShrinkMap', ratios=[0.4], max_shr=20, min_text_size=8, prefix='seg'),
+    dict(type='MakeBoarderMap', shrink_ratio=0.4, thresh_min=0.3, thresh_max=0.7),
+    dict(type='Resize', keep_ratio=True, size=(448, 448), img_mode='nearest', mask_mode='nearest'),
+    dict(type='Canvas', size=(448, 448), img_v=0, mask_v=0),
+    dict(type='FilterKeys',
+         need_keys=['seg_mask', 'seg_map', 'polygon', 'boarder_mask', 'boarder_map', 'shape', 'input', 'tags',
+                    'ratio']),
+    dict(type='ToTensor', keys=['seg_mask', 'seg_map', 'boarder_mask', 'boarder_map', 'input']),
+    # dict(type='Normalize', key='input'),
 ]
 
 dataset = [dict(type='TxtDataset',
@@ -37,13 +50,19 @@ dataset = [dict(type='TxtDataset',
                 txt_file=r'D:\DB-master\dataset\ours\train.txt',
                 )]
 
-dataloader = dict(type='BaseDataloader', batch_size=2)
+train_dataloader = dict(type='BaseDataloader', batch_size=batch_size)
+test_dataloader = dict(type='BaseDataloader', batch_size=1)
 
 data = dict(
     train=dict(
-        transforms=transforms,
+        transforms=train_transforms,
         datasets=dataset,
-        loader=dataloader,
+        loader=train_dataloader,
+    ),
+    val=dict(
+        transforms=test_transforms,
+        datasets=dataset,
+        loader=test_dataloader,
     ),
 )
 
@@ -206,6 +225,14 @@ criterion = [
          loss_weight=0.1, loss_name='dice loss'),
 ]
 
+postprocessor = dict(
+    type='Postprocessor',
+    debug=False,
+    resize=True,
+    thresh=0.3,
+    box_thresh=0.7,
+    max_candidates=100,
+)
 # postprocess = dict(
 #     train=dict(
 #
@@ -228,7 +255,7 @@ runner = dict(
     type='Runner',
     epochs=max_epoch,
     iterations=max_iterations,
-    trainval_ratio=2000,
+    trainval_ratio=10,
     snapshot_interval=20000,
     grad_clip=0,
 )

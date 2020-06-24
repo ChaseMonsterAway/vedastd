@@ -12,8 +12,8 @@ from vedastd.models import build_model
 from vedastd.criteria import build_criterion
 from vedastd.optims import build_optim
 from vedastd.lr_schedulers import build_lr_scheduler
-from vedastd.utils import STRMeters
 from vedastd.runner import build_runner
+from vedastd.postpocessor import build_postprocessor
 
 
 def assemble(cfg_fp, checkpoint='', test_mode=False):
@@ -98,6 +98,12 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
     else:
         lr_scheduler = None
 
+    # post processor
+    if cfg.get('postprocessor'):
+        postprocessor = build_postprocessor(cfg['postprocessor'])
+    else:
+        postprocessor = None
+
     logger.info('Assemble, Step 8, Build Runner')
     # 8. runner
     runner = build_runner(
@@ -108,6 +114,7 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
             criterion=criterion,
             lr_scheduler=lr_scheduler,
             optim=optim,
+            postprocessor=postprocessor,
             workdir=cfg['workdir'],
             gpu=gpu,
             test_cfg=cfg.get('test_cfg', None),

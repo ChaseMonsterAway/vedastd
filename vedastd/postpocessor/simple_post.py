@@ -3,59 +3,51 @@ import numpy as np
 import pyclipper
 from shapely.geometry import Polygon
 
-from .registery import POSTPROCESS
+from .registry import POSTPROCESS
 
 
 @POSTPROCESS.register_module
-class SegDetectorRepresenter:
-    def __init__(self):
-        self.thresh = 0.3
-        self.box_thresh = 0.7
-        self.max_candidates = 100
-        self.resize = False
-        self.dest = 'binary_map'
+class Postprocessor:
+    def __init__(self, thresh=0.3, box_thresh=0.7, max_candidates=100, unclip_ratio=1.5,
+                 resize=False, name='binary_map', min_size=3, debug=False):
+        self.thresh = thresh
+        self.box_thresh = box_thresh
+        self.max_candidates = max_candidates
+        self.resize = resize
+        self.dest = name
+        self.ur = unclip_ratio
+        self.min_size = min_size
+        self.debug = debug
 
-        self.min_size = 3
-        self.scale_ratio = 0.4
-        self.debug = True
-
-    def represent(self, batch, _pred):
-        '''
-        batch: (image, polygons, ignore_tags
-        batch: a dict produced by dataloaders.
-            image: tensor of shape (N, C, H, W).
-            polygons: tensor of shape (N, K, 4, 2), the polygons of objective regions.
-            ignore_tags: tensor of shape (N, K), indicates whether a region is ignorable or not.
-            shape: the original shape of images.
-            filename: the original filenames of images.
-        pred:
-            binary: text region segmentation map, with shape (N, 1, H, W)
-            thresh: [if exists] thresh hold prediction with shape (N, 1, H, W)
-            thresh_binary: [if exists] binarized with threshhold, (N, 1, H, W)
-        '''
+    def __call__(self, batch, _pred):
         images = batch['input']
+        ratio = batch['ratio'].item()
         pred = _pred[self.dest]
         segmentation = self.binarize(pred)
         boxes_batch = []
-        preds = []
+        scores_batch = []
         for batch_index in range(images.size(0)):
-            height, width = batch['shape'][batch_index]
-            # height, width = images[batch_index].shape[1:]
-            show_img = images[batch_index].permute(1, 2, 0).numpy()
-            show_img = (show_img - np.min(show_img)) / (np.max(show_img) - np.min(show_img))
-            show_img = (show_img * 255).astype(np.uint8)
-            cv2.imshow('input', show_img)
-            boxes, single_pred = self.boxes_from_bitmap(
+            height, width = batch['shape'][batch_index].data.numpy()
+            # if self.debug:
+            # show_img = images[batch_index].permute(1, 2, 0).numpy()
+            # show_img = (show_img - np.min(show_img)) / (np.max(show_img) - np.min(show_img))
+            # show_img = (show_img * 255).astype(np.uint8)
+            # cv2.imshow('input', show_img)
+            boxes, scores = self.boxes_from_bitmap(
                 _pred['binary_map'][batch_index],
-                segmentation[batch_index], width, height)
+                segmentation[batch_index], ratio, height, width)
+            # for box in boxes:
+            #     cv2.rectangle(show_img, tuple(box[0]), tuple(box[2]), (0, 255, 0))
+            # cv2.imshow('ii', show_img)
+            # cv2.waitKey()
             boxes_batch.append(boxes)
-            preds.append(single_pred.reshape(1, *single_pred.shape))
-        return boxes_batch, _pred
+            scores_batch.append(scores)
+        return boxes_batch, scores_batch
 
     def binarize(self, pred):
         return pred > self.thresh
 
-    def boxes_from_bitmap(self, pred, _bitmap, dest_width, dest_height):
+    def boxes_from_bitmap(self, pred, _bitmap, ratio, h, w):
         '''
         _bitmap: single map with shape (1, H, W),
             whose values are binarized as {0, 1}
@@ -65,6 +57,7 @@ class SegDetectorRepresenter:
         pred = pred.cpu().detach().numpy()[0]
         height, width = bitmap.shape
         boxes = []
+        scores = []
         _, contours, _ = cv2.findContours(
             (bitmap * 255).astype(np.uint8),
             cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
@@ -72,6 +65,7 @@ class SegDetectorRepresenter:
         if self.debug:
             bitmap = cv2.cvtColor(pred * 255, cv2.COLOR_GRAY2BGR)
 
+        # TO DO
         for contour in contours[:self.max_candidates]:
             points, sside = self.get_mini_boxes(contour)
             if sside < self.min_size:
@@ -89,6 +83,7 @@ class SegDetectorRepresenter:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
             if self.box_thresh > score:
                 continue
+            scores.append(score)
             box = self.unclip(points).reshape(-1, 1, 2)
             box, sside = self.get_mini_boxes(box)
             if sside < self.min_size + 2:
@@ -96,24 +91,23 @@ class SegDetectorRepresenter:
             box = np.array(box)
 
             if not self.resize:
-                dest_width = width
-                dest_height = height
+                ratio = 1
 
             box[:, 0] = np.clip(
-                np.round(box[:, 0] / width * dest_width), 0, dest_width)
+                np.round(box[:, 0] / ratio), 0, w)
             box[:, 1] = np.clip(
-                np.round(box[:, 1] / height * dest_height), 0, dest_height)
+                np.round(box[:, 1] / ratio), 0, h)
             boxes.append(box.tolist())
 
         if self.debug:
             cv2.imshow('mask', bitmap.astype(np.uint8))
             cv2.waitKey()
 
-        return boxes, bitmap
+        return boxes, scores
 
     def unclip(self, box):
         poly = Polygon(box)
-        distance = poly.area * 1.5 / poly.length
+        distance = poly.area * self.ur / poly.length
         offset = pyclipper.PyclipperOffset()
         offset.AddPath(box, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
         expanded = np.array(offset.Execute(distance))

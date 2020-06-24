@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 from vedastd.utils.checkpoint import load_checkpoint, save_checkpoint
 from .registry import RUNNERS
-from ..postpocessor.representer import SegDetectorRepresenter
+from ..utils.metrics import QuadMeasurer
 
 np.set_printoptions(precision=4)
 
@@ -28,6 +28,7 @@ class Runner(object):
                  criterion,
                  optim,
                  lr_scheduler,
+                 postprocessor,
                  iterations,
                  workdir,
                  metric=None,
@@ -47,6 +48,7 @@ class Runner(object):
         self.lr_scheduler = lr_scheduler
         self.start_iters = start_iters
         self.iterations = iterations
+        self.postprocessor = postprocessor
         self.workdir = workdir
         self.trainval_ratio = trainval_ratio
         self.snapshot_interval = snapshot_interval
@@ -72,7 +74,8 @@ class Runner(object):
                     # if self.trainval_ratio > 0 \
                     #         and (iters + 1) % self.trainval_ratio == 0 \
                     #         and self.loader.get('val'):
-                    #     self.validate_epoch()
+                if epoch % 10 == 0:
+                    self.validate_epoch()
                     # self.metric.reset()
                     # if (iters + 1) % self.snapshot_interval == 0:
                     #     self.save_model(out_dir=self.workdir,
@@ -82,23 +85,8 @@ class Runner(object):
 
     def validate_epoch(self):
         logger.info('Iteration %d, Start validating' % self.c_iter)
-        self.metric.reset()
-        for img, label in self.loader['val']:
-            self.validate_batch(img, label)
-        if self.metric.avg['acc']['true'] >= self.best_acc:
-            self.best_acc = self.metric.avg['acc']['true']
-            self.save_model(out_dir=self.workdir,
-                            filename='best_acc.pth',
-                            iteration=self.c_iter)
-        if self.metric.avg['edit'] >= self.best_norm:
-            self.best_norm = self.metric.avg['edit']
-            self.save_model(out_dir=self.workdir,
-                            filename='best_norm.pth',
-                            iteration=self.c_iter)
-        logger.info('Validate, best_acc %.4f, best_edit %s' % (self.best_acc, self.best_norm))
-        logger.info('Validate, acc %.4f, edit %s' % (self.metric.avg['acc']['true'],
-                                                     self.metric.avg['edit']))
-        logger.info(f'\n{self.metric.predict_example_log}')
+        for batch in self.loader['val']:
+            self.validate_batch(batch)
 
     def test_epoch(self):
         logger.info('Start testing')
@@ -125,28 +113,27 @@ class Runner(object):
         self.optim.step()
 
         if self.c_iter % 10 == 0:
-            SegDetectorRepresenter().represent(batch, pred)
+            if self.postprocessor:
+                boxes = self.postprocessor(batch, pred)
+                res = QuadMeasurer().validate_measure(batch, boxes)
+                logger.info(f'{res}')
+
             logger.info(f'Train, Iter {self.c_iter}, LR {self.lr} loss {loss.item()}')
 
             for key, value in loss_infos.items():
                 logger.info(f'{key}:\t{value}')
 
-    def validate_batch(self, img, label):
+    def validate_batch(self, batch):
         self.model.eval()
         with torch.no_grad():
-            label_input, label_length, label_target = self.converter.test_encode(label)
+            img = batch['input']
             if self.gpu:
                 img = img.cuda()
-                label_input = label_input.cuda()
-            if self.need_text:
-                pred = self.model(img, label_input)
-            else:
-                pred = self.model(img)
-            preds_prob = F.softmax(pred, dim=2)
-            preds_prob, pred_index = preds_prob.max(dim=2)
-            pred_str = self.converter.decode(pred_index)
-
-            self.metric.measure(pred_str, label, preds_prob)
+            pred = self.model(img)
+            if self.postprocessor:
+                boxes = self.postprocessor(batch, pred)
+                res = QuadMeasurer().validate_measure(batch, boxes)
+                logger.info(f'EVAL!!! \n {res}')
 
     def test_batch(self, img, label):
         self.model.eval()

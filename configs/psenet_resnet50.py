@@ -13,7 +13,7 @@ logger = dict(
 )
 
 # 2. data
-batch_size = 2
+batch_size = 16
 
 # transforms
 transforms = [
@@ -26,10 +26,13 @@ transforms = [
     dict(type='RandomRotation', angles=(-10, 10), p=1),
     dict(type='RandomCrop', size=(640, 640), prefix='text'),
     # dict(type='Canvas', size=(224, 224), img_v=0, mask_v=0),
-    # dict(type='FilterKeys',
-    #     need_keys=['seg_mask', 'seg_map', 'polygon', 'boarder_mask', 'boarder_map', 'shape', 'input', 'tags']),
-    # dict(type='ToTensor', keys=['seg_mask', 'seg_map', 'polygon', 'boarder_mask', 'boarder_map', 'input']),
-    # dict(type='Normalize', key='input'),
+    dict(type='FilterKeys',
+         need_keys=['shape', 'input', 'text_map', 'text_mask', 'kernels_map', 'kernels_mask']),
+    dict(type='ToTensor', keys=['input', 'text_map', 'text_mask', 'kernels_map', 'kernels_mask']),
+    # input value are 0-1
+    # dict(type='Normalize', mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], key='input'),
+    # input value are 0-255
+    dict(type='Normalize', mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375), key='input'),
 ]
 
 root = '/home/admin123/PycharmProjects/github/DB/datasets/icdar2015/'
@@ -39,7 +42,7 @@ dataset = [dict(type='TxtDataset',
                 txt_file=root + 'train_list.txt',
                 )]
 
-dataloader = dict(type='BaseDataloader', batch_size=1)
+dataloader = dict(type='BaseDataloader', batch_size=2)
 
 data = dict(
     train=dict(
@@ -183,7 +186,7 @@ model = dict(
     head=dict(
         type='PseHead',
         scale=1,
-        name='pse_map',
+        name=('pred_text_map', 'pred_kernels_map'),
         layers=[
             dict(type='ConvModule',
                  in_channels=1024,
@@ -210,3 +213,12 @@ model = dict(
         ],
     )
 )
+
+criterion = [
+    dict(type='DiceLoss', eps=1e-6, pred_map='pred_text_map', gt_map='text_map', gt_mask='text_mask',
+         loss_weight=0.7, loss_name='text dice loss', ohem=True),
+    dict(type='MultiDiceLoss', eps=1e-6, score_map='pred_text_map', pred_map='pred_kernels_map', gt_map='kernels_map',
+         gt_mask='text_mask', loss_weight=0.3, loss_name='kernels dice loss', ohem=False),
+]
+
+

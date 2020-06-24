@@ -37,11 +37,8 @@ class PseNet(nn.Module):
         self.body = build_backbone(backbone) if backbone else None
         self.enhance = build_enhance(enhance) if enhance else None
         self.fusion = build_brick(fusion) if fusion else None
-        print(self.enhance)
-        print(self.fusion)
         self.collect = build_brick(collect) if collect else None
         self.head = build_head(head) if head else None
-        print(head)
 
     def forward(self, img):
         feature = self.body(img)

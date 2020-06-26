@@ -2,6 +2,7 @@ import torch
 
 from .base_loss import BaseLoss
 from .registry import CRITERIA
+from .util import ohem_batch
 
 
 @CRITERIA.register_module
@@ -39,8 +40,10 @@ class DiceLoss(BaseLoss):
 
         return loss
 
-    def forward(self, pred, target):
+    def forward(self, pred, target):  # only pred is in CUDA
         pmap, tmap, tmask = self.extract_pairs(pred, target)
+        if self.ohem:
+            tmask = ohem_batch(pmap, tmap, tmask)
         tmap, tmask = tmap.to(pmap.device), tmask.to(pmap.device)
         loss = self._compute(pmap, tmap, tmask)
 
@@ -61,11 +64,10 @@ class MultiDiceLoss(BaseLoss):
         if score_map.dim() == 4:
             score_map = score_map[:, 0, :, :]
             gt_mask = gt_mask[:, 0, :, :]
-        mask0 = torch.sigmoid(score_map).data.cpu().numpy()
-        mask1 = gt_mask.data.cpu().numpy()
-        selected_masks = ((mask0 > 0.5) & (mask1 > 0.5)).astype('float32')
-        selected_masks = torch.from_numpy(selected_masks).float()
-        return selected_masks
+        mask0 = torch.sigmoid(score_map).data.cpu()
+        mask1 = gt_mask.data.cpu()
+        selected_masks = (mask0 > 0.5) & (mask1 > 0.5)
+        return selected_masks.float()
 
     def _compute(self, pred, gt, mask, weights=None):
         """
@@ -91,6 +93,7 @@ class MultiDiceLoss(BaseLoss):
             union = (pred_i * mask).sum() + (gt_i * mask).sum() + self.eps
             loss = 1 - 2.0 * intersection / union
             assert loss <= 1
+            print(loss)
             loss_kernels.append(loss)
         return sum(loss_kernels) / len(loss_kernels)
 

@@ -16,7 +16,7 @@ logger = dict(
 batch_size = 16
 
 # transforms
-transforms = [
+train_transforms = [
     dict(type='MakeShrinkMap', ratios=[1.0], max_shr=20, min_text_size=8, prefix='text'),
     dict(type='MakeShrinkMap', ratios=[0.9, 0.8, 0.7, 0.6, 0.5, 0.4], max_shr=20, min_text_size=8,
          prefix='kernels'),
@@ -25,7 +25,6 @@ transforms = [
     dict(type='RandomFlip', p=0.5, horizontal=True, vertical=False),
     dict(type='RandomRotation', angles=(-10, 10), p=1),
     dict(type='RandomCrop', size=(640, 640), prefix='text'),
-    # dict(type='Canvas', size=(224, 224), img_v=0, mask_v=0),
     dict(type='FilterKeys',
          need_keys=['shape', 'input', 'text_map', 'text_mask', 'kernels_map', 'kernels_mask']),
     dict(type='ToTensor', keys=['input', 'text_map', 'text_mask', 'kernels_map', 'kernels_mask']),
@@ -35,21 +34,43 @@ transforms = [
     dict(type='Normalize', mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375), key='input'),
 ]
 
-root = '/home/admin123/PycharmProjects/github/DB/datasets/icdar2015/'
-dataset = [dict(type='TxtDataset',
-                img_root=root + 'train_images',
-                gt_root=root + 'train_gts',
-                txt_file=root + 'train_list.txt',
-                )]
+test_transforms = [
+    #dict(type='MakeShrinkMap', ratios=[1.0], max_shr=20, min_text_size=8, prefix='text'),
+    #dict(type='MakeShrinkMap', ratios=[0.9, 0.8, 0.7, 0.6, 0.5, 0.4], max_shr=20, min_text_size=8,
+    #     prefix='kernels'),
+    dict(type='Resize', keep_ratio=True, size=(2240, 2240), img_mode='nearest'),
+    dict(type='FilterKeys',
+         need_keys=['shape', 'input', 'ratio']),
+    dict(type='ToTensor', keys=['input']),
+    dict(type='Normalize', mean=(123.675, 116.280, 103.530), std=(58.395, 57.120, 57.375), key='input'),
+]
+
+root = 'datasets/icdar2015/'
+train_dataset = [dict(type='TxtDataset',
+                      img_root=root + 'train_images',
+                      gt_root=root + 'train_gts',
+                      txt_file=root + 'train_list.txt',
+                      )]
+
+test_dataset = [dict(type='TxtDataset',
+                     img_root=root + 'test_images',
+                     gt_root=root + 'test_gts',
+                     txt_file=root + 'test_list.txt',
+                     )]
 
 dataloader = dict(type='BaseDataloader', batch_size=2)
 
 data = dict(
     train=dict(
-        transforms=transforms,
-        datasets=dataset,
+        transforms=train_transforms,
+        datasets=train_dataset,
         loader=dataloader,
     ),
+    val=dict(
+        transforms=test_transforms,
+        datasets=test_dataset,
+        loader=dataloader,
+    )
 )
 
 norm_cfg = dict(type='BN')
@@ -221,4 +242,13 @@ criterion = [
          gt_mask='text_mask', loss_weight=0.3, loss_name='kernels dice loss', ohem=False),
 ]
 
-
+postprocessor = dict(
+    type='PsePostprocessor',
+    debug=False,
+    resize=True,
+    thresh=1.0,
+    min_kernel_area=5,
+    box_thresh=0.7,
+    max_candidates=100,
+    name=('pred_text_map', 'pred_kernels_map'),
+)

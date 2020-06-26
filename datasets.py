@@ -22,9 +22,9 @@ def tensor_to_img(t_img: torch.Tensor):
 
 def main():
     cfg = Config.fromfile('./configs/psenet_resnet50.py')
-    transforms = build_transform(cfg['transforms'])
+    transforms = build_transform(cfg['test_transforms'])
     print(transforms)
-    datasets = build_datasets(cfg['dataset'], dict(transforms=transforms))
+    datasets = build_datasets(cfg['test_dataset'], dict(transforms=transforms))
     """data = datasets[0][0]
     for item in data['text_mask']:
         print(item.shape)
@@ -34,14 +34,15 @@ def main():
         print(item.shape)
         cv2.imshow(f'kernel_mask_{idx}', tensor_to_img(item))
         cv2.waitKey()"""
-    dataloader = BaseDataloader(datasets, batch_size=1)
+    dataloader = BaseDataloader(datasets, batch_size=2)
     for idx, batch in enumerate(dataloader):
+        print(batch)
         for key, value in batch.items():
             print(key, type(value))
-        for item in batch['text_mask']:
+        for item in batch['input']:
             print(item.shape)
-        for idx, item in enumerate(batch['kernels_mask']):
-            print(item.shape)
+        #for idx, item in enumerate(batch['kernels_mask']):
+        #    print(item.shape)
     #     for key, values in batch.items():
     #         #print(key, values)
     #         if isinstance(values, list):

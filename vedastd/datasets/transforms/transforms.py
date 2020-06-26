@@ -444,7 +444,7 @@ class Resize:
             else:
                 new_img, ratio = self._resize(values, mode)
                 data[key] = new_img
-        #data['ratio'] = ratio
+        data['ratio'] = ratio
         # cv2.imshow('map', data['text_map'][0])
         # cv2.waitKey()
         # print(data['text_map'][0].shape)

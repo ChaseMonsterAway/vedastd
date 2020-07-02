@@ -50,6 +50,11 @@ dataset = [dict(type='TxtDataset',
                 txt_file=r'D:\DB-master\dataset\ours\train.txt',
                 )]
 
+collect_fns = dict(
+    val=dict(type='BaseCollect'),
+    test=dict(type='BaseCollect'),
+)
+
 train_dataloader = dict(type='BaseDataloader', batch_size=batch_size)
 test_dataloader = dict(type='BaseDataloader', batch_size=1)
 

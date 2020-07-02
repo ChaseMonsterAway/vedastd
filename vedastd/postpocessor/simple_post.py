@@ -28,18 +28,9 @@ class Postprocessor:
         scores_batch = []
         for batch_index in range(images.size(0)):
             height, width = batch['shape'][batch_index].data.numpy()
-            # if self.debug:
-            # show_img = images[batch_index].permute(1, 2, 0).numpy()
-            # show_img = (show_img - np.min(show_img)) / (np.max(show_img) - np.min(show_img))
-            # show_img = (show_img * 255).astype(np.uint8)
-            # cv2.imshow('input', show_img)
             boxes, scores = self.boxes_from_bitmap(
                 _pred['binary_map'][batch_index],
                 segmentation[batch_index], ratio, height, width)
-            # for box in boxes:
-            #     cv2.rectangle(show_img, tuple(box[0]), tuple(box[2]), (0, 255, 0))
-            # cv2.imshow('ii', show_img)
-            # cv2.waitKey()
             boxes_batch.append(boxes)
             scores_batch.append(scores)
         return boxes_batch, scores_batch
@@ -135,7 +126,8 @@ class Postprocessor:
                points[index_3], points[index_4]]
         return box, min(bounding_box[1])
 
-    def box_score(self, bitmap, box):
+    @staticmethod
+    def box_score(bitmap, box):
         '''
         naive version of box score computation,
         only for helping principle understand.
@@ -144,7 +136,8 @@ class Postprocessor:
         cv2.fillPoly(mask, box.reshape(1, 4, 2).astype(np.int32), 1)
         return cv2.mean(bitmap, mask)[0]
 
-    def box_score_fast(self, bitmap, _box):
+    @staticmethod
+    def box_score_fast(bitmap, _box):
         h, w = bitmap.shape[:2]
         box = _box.copy()
         xmin = np.clip(np.floor(box[:, 0].min()).astype(np.int), 0, w - 1)

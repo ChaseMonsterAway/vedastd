@@ -4,16 +4,17 @@ import torch
 from torch import nn
 
 from vedastd import utils
-from vedastd.loggers import build_logger
-from vedastd.datasets import build_datasets
-from vedastd.datasets.transforms.builder import build_transform
-from vedastd.dataloaders import build_dataloader
-from vedastd.models import build_model
 from vedastd.criteria import build_criterion
-from vedastd.optims import build_optim
+from vedastd.dataloaders import build_dataloader
+from vedastd.dataloaders.collect_fn import build_collect_fn
+from vedastd.datasets import build_datasets
+from vedastd.transformers import build_transform
+from vedastd.loggers import build_logger
 from vedastd.lr_schedulers import build_lr_scheduler
-from vedastd.runner import build_runner
+from vedastd.models import build_model
+from vedastd.optims import build_optim
 from vedastd.postpocessor import build_postprocessor
+from vedastd.runner import build_runner
 
 
 def assemble(cfg_fp, checkpoint='', test_mode=False):
@@ -54,19 +55,31 @@ def assemble(cfg_fp, checkpoint='', test_mode=False):
         test_tf = build_transform(cfg['data']['test']['transforms'])
         test_dataset = build_datasets(cfg['data']['test']['datasets'], dict(transforms=test_tf))
 
+    ## 2.2 collect fn
+    collect_fns = {}
+    if cfg['collect_fn'].get('train'):
+        collect_fns['train'] = build_collect_fn(cfg['collect_fn'].get('train'))
+    if cfg['collect_fn'].get('val'):
+        collect_fns['val'] = build_collect_fn(cfg['collect_fn'].get('val'))
+    if cfg['collect_fn'].get('test'):
+        collect_fns['test'] = build_collect_fn(cfg['collect_fn'].get('test'))
+
     logger.info('Assemble, Step 2, Build Dataloader')
     # 2.2 dataloader
     loader = {}
     if not test_mode:
-        train_loader = build_dataloader(cfg['data']['train']['loader'], dict(dataset=train_dataset))
+        train_loader = build_dataloader(cfg['data']['train']['loader'],
+                                        dict(dataset=train_dataset, collate_fn=collect_fns.get('train')))
         loader['train'] = train_loader
 
     if cfg['data'].get('val') and not test_mode:
-        val_loader = build_dataloader(cfg['data']['val']['loader'], dict(dataset=val_dataset))
+        val_loader = build_dataloader(cfg['data']['val']['loader'],
+                                      dict(dataset=val_dataset, collect_fn=collect_fns.get('val')))
         loader['val'] = val_loader
 
     if cfg['data'].get('test') and test_mode:
-        test_loader = build_dataloader(cfg['data']['test']['loader'], dict(dataset=test_dataset))
+        test_loader = build_dataloader(cfg['data']['test']['loader'],
+                                       dict(dataset=test_dataset, collect_fn=collect_fns.get('test')))
         loader['test'] = test_loader
 
     logger.info('Assemble, Step 3, Build Model')

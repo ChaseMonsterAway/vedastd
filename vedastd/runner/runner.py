@@ -151,8 +151,6 @@ class Runner(object):
             preds_prob, pred_index = preds_prob.max(dim=2)
             pred_str = self.converter.decode(pred_index)
 
-            self.metric.measure(pred_str, label, preds_prob)
-
     def save_model(self,
                    out_dir,
                    filename,

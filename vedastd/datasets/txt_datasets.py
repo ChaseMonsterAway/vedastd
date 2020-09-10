@@ -20,7 +20,8 @@ class TxtDataset(BaseDataset):
             for line in f.readlines():
                 line = line.strip()
                 poly_list, tag_list = self.load_ann(line)
-                need_tuple = (os.path.join(self.img_root, line), poly_list, tag_list)
+                need_tuple = (
+                os.path.join(self.img_root, line), poly_list, tag_list)
                 need_items.append(need_tuple)
 
         return need_items
@@ -68,5 +69,4 @@ class TxtDataset(BaseDataset):
 
         if self.transforms:
             results = self.transforms(results)
-
         return results

@@ -71,7 +71,8 @@ class JunctionBlock(nn.Module):
             if lateral is not None:
                 feat = lateral
             else:
-                raise ValueError('There is neither top down feature nor lateral feature')
+                raise ValueError(
+                    'There is neither top down feature nor lateral feature')
 
         feat = self.post_block(feat)
 
@@ -111,7 +112,8 @@ class FusionBlock(nn.Module):
             in_channels = in_channels_list[idx]
             out_channels = out_channels_list[idx]
             feat_stride = feat_strides[idx]
-            ups_num = int(max(1, math.log2(feat_stride) - math.log2(common_stride)))
+            ups_num = int(
+                max(1, math.log2(feat_stride) - math.log2(common_stride)))
             head_ops = []
             for idx2 in range(ups_num):
                 cur_in_channels = in_channels if idx2 == 0 else out_channels
@@ -142,6 +144,7 @@ class FusionBlock(nn.Module):
         else:
             res = torch.cat(outs, 1)
         return res
+
 
 @BRICKS.register_module
 class UpsampleFusion(nn.Module):
@@ -185,6 +188,7 @@ class UpsampleFusion(nn.Module):
             res = torch.cat(outs, 1)
         return res
 
+
 @BRICKS.register_module
 class CollectBlock(nn.Module):
     """CollectBlock
@@ -209,13 +213,14 @@ class CollectBlock(nn.Module):
             if isinstance(self.from_layer, str):
                 feats[self.to_layer] = feats[self.from_layer]
             elif isinstance(self.from_layer, list):
-                feats[self.to_layer] = {f_layer: feats[f_layer] for f_layer in self.from_layer}
-
+                feats[self.to_layer] = {f_layer: feats[f_layer] for f_layer in
+                                        self.from_layer}
 
 
 @BRICKS.register_module
 class CellAttentionBlock(nn.Module):
-    def __init__(self, feat, hidden, fusion_method='add', post=None, post_activation='softmax'):
+    def __init__(self, feat, hidden, fusion_method='add', post=None,
+                 post_activation='softmax'):
         super(CellAttentionBlock, self).__init__()
 
         feat_ = feat.copy()

@@ -24,7 +24,7 @@ def ohem_single(pred_text, gt_text, mask):  # shape h*w
     return torch.unsqueeze(selected_mask, dim=0).float()
 
 
-def ohem_batch(scores, gt_texts, training_masks):  # shape: B*HH*W
+def ohem_batch(scores, gt_texts, training_masks):  # shape: B*H*W
     scores = scores.data.cpu()
 
     selected_masks = []
@@ -33,9 +33,7 @@ def ohem_batch(scores, gt_texts, training_masks):  # shape: B*HH*W
 
     selected_masks = torch.cat(selected_masks, 0)
 
-
     return selected_masks
-
 
 # if __name__ == '__main__':
 #     torch.manual_seed(1)

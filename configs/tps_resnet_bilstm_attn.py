@@ -276,7 +276,7 @@ optimizer = dict(type='Adadelta', lr=1.0, rho=0.95, eps=1e-8)
 
 lr_scheduler = dict(type='StepLR', niter_per_epoch=100000, max_epochs=3, milestones=[150000, 250000])
 
-# 8. runner
+# 8. runner_old
 max_iterations = 300000
 runner = dict(
     type='Runner',

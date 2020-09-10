@@ -12,7 +12,6 @@ class DiceLoss(BaseLoss):
         super(DiceLoss, self).__init__(*args, **kwargs)
         self.eps = eps
 
-
     def _compute(self, pred, gt, mask, weights=None):
         """
         Args:
@@ -33,6 +32,7 @@ class DiceLoss(BaseLoss):
             assert weights.shape == mask.shape
             mask = weights * mask
 
+        pred = torch.sigmoid(pred)
         intersection = (pred * gt * mask).sum()
         union = (pred * mask).sum() + (gt * mask).sum() + self.eps
         loss = 1 - 2.0 * intersection / union
@@ -87,13 +87,12 @@ class MultiDiceLoss(BaseLoss):
 
         loss_kernels = []
         for i in range(pred.shape[1]):
-            pred_i = pred[:, i, :, :]
+            pred_i = torch.sigmoid(pred[:, i, :, :])
             gt_i = gt[:, i, :, :]
             intersection = (pred_i * gt_i * mask).sum()
             union = (pred_i * mask).sum() + (gt_i * mask).sum() + self.eps
             loss = 1 - 2.0 * intersection / union
-            assert loss <= 1
-            print(loss)
+            # assert loss <= 1
             loss_kernels.append(loss)
         return sum(loss_kernels) / len(loss_kernels)
 

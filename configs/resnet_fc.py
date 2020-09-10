@@ -185,7 +185,7 @@ optimizer = dict(type='Adam', lr=0.001)
 # 7. lr scheduler
 lr_scheduler = dict(type='StepLR', niter_per_epoch=100000, max_epochs=3, milestones=[100000, 200000])
 
-# 8. runner
+# 8. runner_old
 max_iterations = 300000
 runner = dict(
     type='Runner',

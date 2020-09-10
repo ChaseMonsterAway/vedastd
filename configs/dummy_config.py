@@ -249,7 +249,7 @@ optimizer = dict(type='Adam', lr=0.001)
 max_epoch = 1200
 lr_scheduler = dict(type='PolyLR', max_epochs=max_epoch)
 resume = None
-# 8. runner
+# 8. runner_old
 max_iterations = 300000
 runner = dict(
     type='Runner',

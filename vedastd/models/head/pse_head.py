@@ -25,7 +25,7 @@ class PseHead(nn.Module):
     def forward(self, feature):
         result = {}
         binary = self.binarize(feature)
-        result[self.name[0]] = binary[:, 0, :, :].unsqueeze(dim=1)  # b * h * w
+        result[self.name[0]] = binary[:, 0:1, :, :]  # b * 1 * h * w
         result[self.name[1]] = binary[:, 1:, :, :]  # b * c * h * w
 
         return result

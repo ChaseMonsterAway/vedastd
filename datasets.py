@@ -22,9 +22,9 @@ def tensor_to_img(t_img: torch.Tensor):
 
 def main():
     cfg = Config.fromfile('./configs/psenet_resnet50.py')
-    transforms = build_transform(cfg['test_transforms'])
+    transforms = build_transform(cfg['train_transforms'])
     print(transforms)
-    datasets = build_datasets(cfg['test_dataset'], dict(transforms=transforms))
+    datasets = build_datasets(cfg['train_dataset'], dict(transforms=transforms))
     """data = datasets[0][0]
     for item in data['text_mask']:
         print(item.shape)
@@ -34,13 +34,25 @@ def main():
         print(item.shape)
         cv2.imshow(f'kernel_mask_{idx}', tensor_to_img(item))
         cv2.waitKey()"""
-    dataloader = BaseDataloader(datasets, batch_size=2)
-    for idx, batch in enumerate(dataloader):
-        print(batch)
-        for key, value in batch.items():
-            print(key, type(value))
-        for item in batch['input']:
-            print(item.shape)
+    dataloader = BaseDataloader(datasets, batch_size=1)
+    for _ in range(10):
+
+        batch = datasets[0][0]
+
+        text_map = batch['text_map']
+        cv2.imshow('a', tensor_to_img(batch['input']))
+        cv2.imshow('ss', tensor_to_img(text_map[0]))
+        cv2.waitKey(0)
+    # for idx, batch in enumerate(dataloader):
+    #     #print(batch)
+    #     text_map = batch['text_map']
+    #     cv2.imshow('ss',text_map[0])
+
+
+        # for key, value in batch.items():
+        #     print(key, type(value))
+        # for item in batch['input']:
+        #     print(item.shape)
         #for idx, item in enumerate(batch['kernels_mask']):
         #    print(item.shape)
     #     for key, values in batch.items():

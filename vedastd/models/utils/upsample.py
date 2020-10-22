@@ -20,6 +20,7 @@ class Upsample(nn.Module):
         assert (self.size is None) ^ (self.scale_factor is None)
 
     def forward(self, x):
+
         if self.size:
             size = self.size
         else:

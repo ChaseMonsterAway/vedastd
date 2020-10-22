@@ -26,11 +26,11 @@ def main():
         dict(type='Flip', p=1),
         dict(type='MakeShrinkMap', ratios=[0.9, 0.8], max_shr=0.9, min_text_size=4),
         dict(type='HueSaturationValue', p=1),
+        dict(type='RandomBrightnessContrast',brightness_limit=0.2,  contrast_limit=0.2, brightness_by_max=True, p=0.5),
         dict(type='RandomCropBasedOnBox'),
         # dict(type='MaskDropout', p=1),
         # dict(type='RandomCrop', p=1, width=256, height=256),
     ]
-
     transforms = build_transform(train_transforms)
     datasets = build_datasets(cfg['dataset'], dict(transforms=transforms))
     for i in range(10):

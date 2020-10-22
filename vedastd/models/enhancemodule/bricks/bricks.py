@@ -71,7 +71,8 @@ class JunctionBlock(nn.Module):
             if lateral is not None:
                 feat = lateral
             else:
-                raise ValueError('There is neither top down feature nor lateral feature')
+                raise ValueError(
+                    'There is neither top down feature nor lateral feature')
 
         feat = self.post_block(feat)
 
@@ -111,7 +112,8 @@ class FusionBlock(nn.Module):
             in_channels = in_channels_list[idx]
             out_channels = out_channels_list[idx]
             feat_stride = feat_strides[idx]
-            ups_num = int(max(1, math.log2(feat_stride) - math.log2(common_stride)))
+            ups_num = int(
+                max(1, math.log2(feat_stride) - math.log2(common_stride)))
             head_ops = []
             for idx2 in range(ups_num):
                 cur_in_channels = in_channels if idx2 == 0 else out_channels
@@ -129,6 +131,49 @@ class FusionBlock(nn.Module):
                 if int(feat_stride) != int(common_stride):
                     head_ops.append(build_module(upsample))
             self.blocks.append(nn.Sequential(*head_ops))
+
+    def forward(self, feats):
+        outs = []
+        for idx, key in enumerate(self.from_layers):
+            block = self.blocks[idx]
+            feat = feats[key]
+            out = block(feat)
+            outs.append(out)
+        if self.method == 'add':
+            res = torch.stack(outs, 0).sum(0)
+        else:
+            res = torch.cat(outs, 1)
+        return res
+
+
+@BRICKS.register_module
+class UpsampleFusion(nn.Module):
+    """UpsampleFusion
+
+        Args:
+    """
+
+    def __init__(self,
+                 method,
+                 from_layers,
+                 feat_strides,
+                 upsample,
+                 common_stride=4,
+                 ):
+        super(UpsampleFusion, self).__init__()
+
+        assert method in ('add', 'concat')
+        self.method = method
+        self.from_layers = from_layers
+
+        self.blocks = nn.ModuleList()
+        for idx in range(len(from_layers)):
+            ops = nn.Sequential()
+            feat_stride = feat_strides[idx]
+            if int(feat_stride) != int(common_stride):
+                upsample['scale_factor'] = int(feat_stride / common_stride)
+                ops = build_module(upsample)
+            self.blocks.append(ops)
 
     def forward(self, feats):
         outs = []
@@ -168,13 +213,14 @@ class CollectBlock(nn.Module):
             if isinstance(self.from_layer, str):
                 feats[self.to_layer] = feats[self.from_layer]
             elif isinstance(self.from_layer, list):
-                feats[self.to_layer] = {f_layer: feats[f_layer] for f_layer in self.from_layer}
-
+                feats[self.to_layer] = {f_layer: feats[f_layer] for f_layer in
+                                        self.from_layer}
 
 
 @BRICKS.register_module
 class CellAttentionBlock(nn.Module):
-    def __init__(self, feat, hidden, fusion_method='add', post=None, post_activation='softmax'):
+    def __init__(self, feat, hidden, fusion_method='add', post=None,
+                 post_activation='softmax'):
         super(CellAttentionBlock, self).__init__()
 
         feat_ = feat.copy()

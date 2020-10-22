@@ -1,9 +1,11 @@
 import cv2
+import torch
 import numpy as np
 import pyclipper
 from shapely.geometry import Polygon
 
 from .registry import POSTPROCESS
+from .utils import pse
 
 
 @POSTPROCESS.register_module
@@ -150,3 +152,84 @@ class Postprocessor:
         box[:, 1] = box[:, 1] - ymin
         cv2.fillPoly(mask, box.reshape(1, -1, 2).astype(np.int32), 1)
         return cv2.mean(bitmap[ymin:ymax + 1, xmin:xmax + 1], mask)[0]
+
+
+@POSTPROCESS.register_module
+class PsePostprocessor:
+    def __init__(self, thresh=1.0, min_kernel_area=5, min_score=0.93, max_candidates=10, min_area=100,
+                 resize=False, name=('pred_text_map', 'pred_kernels_map'), debug=False):
+        self.binary_th = thresh
+        self.max_candidates = max_candidates
+        self.min_area = min_area
+        self.resize = resize
+        self.dest = name
+        self.min_kernel_area = min_kernel_area
+        self.min_score = min_score
+        self.debug = debug
+
+    def __call__(self, batch, _pred):
+        images = batch['input']
+        outputs = torch.cat((_pred[self.dest[0]], _pred[self.dest[1]]), dim=1)
+
+        score = torch.sigmoid(outputs[:, 0, :, :])
+        outputs = (torch.sign(outputs - self.binary_th) + 1) / 2
+
+        text = outputs[:, 0, :, :]
+        kernels = outputs * text
+
+        score = score.data.cpu().numpy().astype(np.float32)
+        # text = text.data.cpu().numpy().astype(np.uint8)
+        kernels = kernels.data.cpu().numpy().astype(np.uint8)
+
+        boxes_batch = []
+        scores_batch = []
+        for batch_index in range(images.size(0)):
+            # print(batch)
+            height, width = batch['shape'][batch_index].data.numpy()
+            scale = batch['ratio'][batch_index].data.numpy()
+            # if self.debug:
+            # show_img = images[batch_index].permute(1, 2, 0).numpy()
+            # show_img = (show_img - np.min(show_img)) / (np.max(show_img) - np.min(show_img))
+            # show_img = (show_img * 255).astype(np.uint8)
+            # cv2.imshow('input', show_img)
+            boxes, scores = self.boxes_from_bitmap(
+                kernels[batch_index], score[batch_index], scale, height, width)
+            # for box in boxes:
+            #     cv2.rectangle(show_img, tuple(box[0]), tuple(box[2]), (0, 255, 0))
+            # cv2.imshow('ii', show_img)
+            # cv2.waitKey()
+            boxes_batch.append(boxes)
+            scores_batch.append(scores)
+        return boxes_batch, scores_batch
+
+    def boxes_from_bitmap(self, kernels, score, scale, h, w):
+        '''
+        kernels: map with shape (7, H, W),
+            whose values are binarized as {0, 1}
+        '''
+        assert kernels.shape[0] == 7
+        pred = pse(kernels, self.min_kernel_area)
+        label = pred
+        label_num = np.max(label) + 1
+        b_list = []
+        s_list = []
+        for i in range(1, label_num):
+            points = np.array(np.where(label == i)).transpose((1, 0))[:, ::-1]
+
+            if points.shape[0] < self.min_area:
+                continue
+
+            s_i = np.mean(score[label == i])
+            if s_i < self.min_score:
+                continue
+
+            rect = cv2.minAreaRect(points)
+            bbox_i = cv2.boxPoints(rect) / scale
+            bbox_i = bbox_i.astype('int32')
+            bbox_i[:, 0] = np.clip(
+                np.round(bbox_i[:, 0]), 0, w)
+            bbox_i[:, 1] = np.clip(
+                np.round(bbox_i[:, 1]), 0, h)
+            b_list.append(bbox_i.tolist())
+            s_list.append(s_i)
+        return b_list, s_list

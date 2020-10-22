@@ -51,8 +51,8 @@ dataset = [dict(type='TxtDataset',
                 )]
 
 collect_fns = dict(
-    val=dict(type='BaseCollect'),
-    test=dict(type='BaseCollect'),
+    val=dict(type='BaseCollate'),
+    test=dict(type='BaseCollate'),
 )
 
 train_dataloader = dict(type='BaseDataloader', batch_size=batch_size)
@@ -254,7 +254,7 @@ optimizer = dict(type='Adam', lr=0.001)
 max_epoch = 1200
 lr_scheduler = dict(type='PolyLR', max_epochs=max_epoch)
 resume = None
-# 8. runner
+# 8. runner_old
 max_iterations = 300000
 runner = dict(
     type='Runner',

@@ -36,6 +36,7 @@ class TxtDataset(BaseDataset):
                 poly = list(zip(line[0::2], line[1::2]))
                 poly_list += poly
                 each_len.append(len(poly_list))
+
                 if line[-1] == 0:
                     tag_list.append(True)
                 else:

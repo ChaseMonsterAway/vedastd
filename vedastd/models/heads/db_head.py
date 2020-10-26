@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from .registry import HEADS
-from ..utils import build_module, build_torch_nn
+from ..utils import build_module
 
 
 @HEADS.register_module

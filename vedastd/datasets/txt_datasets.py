@@ -10,8 +10,9 @@ from .registry import DATASETS
 @DATASETS.register_module
 class TxtDataset(BaseDataset):
 
-    def __init__(self, img_root, gt_root, txt_file, transforms):
+    def __init__(self, img_root, gt_root, txt_file, transforms, ignore_tag=None):
         self.txt_file = txt_file
+        self.ignore_tag = ignore_tag if ignore_tag is not None else 1
         super(TxtDataset, self).__init__(img_root, gt_root, transforms)
 
     def get_needed_item(self):
@@ -37,7 +38,7 @@ class TxtDataset(BaseDataset):
                 poly_list += poly
                 each_len.append(len(poly_list))
 
-                if line[-1] == 0:
+                if line[-1] != self.ignore_tag:
                     tag_list.append(True)
                 else:
                     tag_list.append(False)

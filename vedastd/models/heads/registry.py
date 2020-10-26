@@ -1,3 +1,3 @@
 from vedastd.utils import Registry
 
-HEADS = Registry('head')
+HEADS = Registry('heads')

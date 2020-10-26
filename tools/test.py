@@ -1,26 +1,42 @@
 import argparse
-import sys
 import os
-sys.path.insert(0, os.path.join(os.path.abspath(os.path.dirname(__file__)), '../../vedastr'))
+import sys
 
-from vedastd.assembler import assemble
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
+
+from vedastd.runners import TestRunner
+from vedastd.utils import Config
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Train a scene text recognition model')
-    parser.add_argument('config', help='train config file path')
-    parser.add_argument('checkpoint', help='checkpoint file path')
+    parser = argparse.ArgumentParser(description='Test.')
+    parser.add_argument('config', type=str, help='Config file path')
+    parser.add_argument('checkpoint', type=str, help='Checkpoint file path')
     args = parser.parse_args()
+
     return args
 
 
 def main():
     args = parse_args()
-    cfg_fp = args.config
-    checkpoint = args.checkpoint
 
-    runner = assemble(cfg_fp, test_mode=True, checkpoint=checkpoint)
+    cfg_path = args.config
+    cfg = Config.fromfile(cfg_path)
+
+    _, fullname = os.path.split(cfg_path)
+    fname, ext = os.path.splitext(fullname)
+
+    root_workdir = cfg.pop('root_workdir')
+    workdir = os.path.join(root_workdir, fname)
+    os.makedirs(workdir, exist_ok=True)
+
+    test_cfg = cfg['test']
+    deploy_cfg = cfg['deploy']
+    common_cfg = cfg['common']
+    common_cfg['workdir'] = workdir
+
+    runner = TestRunner(test_cfg, deploy_cfg, common_cfg)
+    runner.load_checkpoint(args.checkpoint)
     runner()
 
 

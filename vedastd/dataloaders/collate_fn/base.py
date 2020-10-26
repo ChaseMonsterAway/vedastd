@@ -1,3 +1,4 @@
+import pdb
 from collections import OrderedDict
 
 import numpy as np
@@ -8,6 +9,8 @@ from .registry import COLLATE_FN
 
 @COLLATE_FN.register_module
 class BaseCollate:
+    def __init__(self, stack_keys):
+        self.stack_keys = stack_keys
 
     def __call__(self, batch):
         data_dict = OrderedDict()
@@ -18,6 +21,9 @@ class BaseCollate:
                 if isinstance(v, np.ndarray):
                     v = torch.from_numpy(v)
                 data_dict[k].append(v)
-        data_dict['image'] = torch.stack(data_dict['image'], 0)
+        # data_dict['image'] = torch.stack(data_dict['image'], 0)
+        for key, value in data_dict.items():
+            if key in self.stack_keys:
+                data_dict[key] = torch.stack(data_dict[key], 0)
 
         return data_dict

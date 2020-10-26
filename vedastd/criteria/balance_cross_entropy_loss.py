@@ -17,14 +17,15 @@ class BalanceCrossEntropyLoss(BaseLoss):
                 pred: dict,
                 target: dict):
         pred, target, mask = self.extract_pairs(pred, target)
-
+        target = target.to(pred.device)
+        mask = mask.to(pred.device)
         positive = (target * mask).byte()
         negative = ((1 - target) * mask).byte()
         positive_count = int(positive.float().sum())
         negative_count = min(int(negative.float().sum()),
                              int(positive_count * self.negative_ratio))
         loss = nn.functional.binary_cross_entropy(
-            pred, target, reduction='none')[:, 0, :, :]
+            pred, target.to(pred.device), reduction='none')[:, 0, :, :]
         positive_loss = loss * positive.float()
         negative_loss = loss * negative.float()
         if negative_loss.view(-1).shape[0] < negative_count:

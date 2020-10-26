@@ -1,3 +1,4 @@
+import pdb
 import torch
 
 from .base_loss import BaseLoss
@@ -10,8 +11,10 @@ class MaskL1Loss(BaseLoss):
         super(MaskL1Loss, self).__init__(*args, **kwargs)
 
     def forward(self, pred, target):
+        # pdb.set_trace()
         pred, target, target_mask = self.extract_pairs(pred, target)
 
-        loss = (torch.abs(pred[:, 0] - target) * target_mask).sum() / target_mask.sum()
+        loss = (torch.abs(pred[:, 0] - target.to(pred.device)) * target_mask.to(
+            pred.device)).sum() / target_mask.sum().to(pred.device)
 
         return loss

@@ -1,4 +1,5 @@
 import numpy as np
+import pdb
 
 from ..utils.icdar15 import DetectionIoUEvaluator
 from .registry import METRICS
@@ -58,13 +59,15 @@ class QuadMeasurer:
         for polygons, pred_polygons, pred_scores, ignore_tags in \
                 zip(gt_polyons_batch, pred_polygons_batch, pred_scores_batch,
                     ignore_tags_batch):
-            gt = [dict(points=polygons[i], ignore=ignore_tags[i])
+            gt = [dict(points=polygons[i], ignore=not ignore_tags[i])
                   for i in range(len(polygons))]
             if self.polygon:
                 pred = [dict(points=pred_polygons[i])
                         for i in range(len(pred_polygons))]
             else:
                 pred = []
+                if isinstance(pred_polygons, list):
+                    pred_polygons = np.array(pred_polygons)
                 for i in range(pred_polygons.shape[0]):
                     if pred_scores[i] >= self.box_thresh:
                         pred.append(

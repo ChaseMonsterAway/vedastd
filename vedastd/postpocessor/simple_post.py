@@ -1,3 +1,5 @@
+import pdb
+
 import cv2
 import torch
 import numpy as np
@@ -22,14 +24,29 @@ class Postprocessor:
         self.debug = debug
 
     def __call__(self, batch, _pred):
-        images = batch['input']
-        ratio = batch['ratio'].item()
+        images = batch['image']
+        # ratio = batch['ratio'].item()
         pred = _pred[self.dest]
         segmentation = self.binarize(pred)
         boxes_batch = []
         scores_batch = []
         for batch_index in range(images.size(0)):
-            height, width = batch['shape'][batch_index].data.numpy()
+            init_shape = batch['shape'][batch_index]
+            if isinstance(init_shape, torch.Tensor):
+                height, width = init_shape.data.numpy()
+            else:
+                height, width = init_shape
+            resize_shape = batch['resized_shape']
+            if isinstance(resize_shape, torch.Tensor):
+                resized_h, resized_w = resize_shape[batch_index].data.numpy()
+            else:
+                resized_h, resized_w = resize_shape[batch_index]
+            hscale = resized_h.data / height
+            wscale = resized_w.data / width
+            ratio = max(hscale, wscale)
+
+            height, width = batch['shape'][batch_index].data
+            # height, width = batch['shape'][batch_index].data.numpy()
             boxes, scores = self.boxes_from_bitmap(
                 _pred['binary_map'][batch_index],
                 segmentation[batch_index], ratio, height, width)
@@ -76,7 +93,7 @@ class Postprocessor:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
             if self.box_thresh > score:
                 continue
-            scores.append(score)
+            scores.append(np.array(score))
             box = self.unclip(points).reshape(-1, 1, 2)
             box, sside = self.get_mini_boxes(box)
             if sside < self.min_size + 2:
@@ -90,7 +107,7 @@ class Postprocessor:
                 np.round(box[:, 0] / ratio), 0, w)
             box[:, 1] = np.clip(
                 np.round(box[:, 1] / ratio), 0, h)
-            boxes.append(box.tolist())
+            boxes.append(np.array(box.tolist()))
 
         if self.debug:
             cv2.imshow('mask', bitmap.astype(np.uint8))
@@ -168,14 +185,14 @@ class PsePostprocessor:
         self.debug = debug
 
     def __call__(self, batch, _pred):
-        images = batch['input']
+        images = batch['image']
         outputs = torch.cat((_pred[self.dest[0]], _pred[self.dest[1]]), dim=1)
 
         score = torch.sigmoid(outputs[:, 0, :, :])
         outputs = (torch.sign(outputs - self.binary_th) + 1) / 2
 
         text = outputs[:, 0, :, :]
-        kernels = outputs * text
+        kernels = outputs * text[:, None, :, :]
 
         score = score.data.cpu().numpy().astype(np.float32)
         # text = text.data.cpu().numpy().astype(np.uint8)
@@ -184,25 +201,40 @@ class PsePostprocessor:
         boxes_batch = []
         scores_batch = []
         for batch_index in range(images.size(0)):
-            # print(batch)
-            height, width = batch['shape'][batch_index].data.numpy()
-            scale = batch['ratio'][batch_index].data.numpy()
+            init_shape = batch['shape'][batch_index]
+            if isinstance(init_shape, torch.Tensor):
+                height, width = init_shape.data.numpy()
+            else:
+                height, width = init_shape
+            resize_shape = batch['resized_shape']
+            if isinstance(resize_shape, torch.Tensor):
+                resized_h, resized_w = resize_shape[batch_index].data.numpy()
+            else:
+                # pdb.set_trace()
+                resized_h, resized_w = resize_shape[batch_index]
+            hscale = resized_h.data / height
+            wscale = resized_w.data / width
+            # scale = max(height, width) / max(resized_h.data, resized_w.data)
+            # scale = batch['ratio'][batch_index].data.numpy()
             # if self.debug:
             # show_img = images[batch_index].permute(1, 2, 0).numpy()
             # show_img = (show_img - np.min(show_img)) / (np.max(show_img) - np.min(show_img))
             # show_img = (show_img * 255).astype(np.uint8)
+            # show_img *= 58
+            # show_img += 110
             # cv2.imshow('input', show_img)
             boxes, scores = self.boxes_from_bitmap(
-                kernels[batch_index], score[batch_index], scale, height, width)
+                kernels[batch_index], score[batch_index], wscale, hscale, height, width)
             # for box in boxes:
             #     cv2.rectangle(show_img, tuple(box[0]), tuple(box[2]), (0, 255, 0))
             # cv2.imshow('ii', show_img)
             # cv2.waitKey()
-            boxes_batch.append(boxes)
-            scores_batch.append(scores)
+
+            boxes_batch.append(np.array(boxes))
+            scores_batch.append(np.array(scores))
         return boxes_batch, scores_batch
 
-    def boxes_from_bitmap(self, kernels, score, scale, h, w):
+    def boxes_from_bitmap(self, kernels, score, wscale, hscale, h, w):
         '''
         kernels: map with shape (7, H, W),
             whose values are binarized as {0, 1}
@@ -224,7 +256,9 @@ class PsePostprocessor:
                 continue
 
             rect = cv2.minAreaRect(points)
-            bbox_i = cv2.boxPoints(rect) / scale
+            bbox_i = cv2.boxPoints(rect)
+            bbox_i[:, 0] = bbox_i[:, 0] / wscale
+            bbox_i[:, 1] = bbox_i[:, 1] / hscale
             bbox_i = bbox_i.astype('int32')
             bbox_i[:, 0] = np.clip(
                 np.round(bbox_i[:, 0]), 0, w)

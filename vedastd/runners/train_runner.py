@@ -7,7 +7,7 @@ import torch
 from .inference_runner import InferenceRunner
 from ..criteria import build_criterion
 from ..lr_schedulers import build_lr_scheduler
-from ..optims import build_optimizer
+from ..optimizers import build_optimizer
 from ..utils import save_checkpoint
 
 
@@ -76,7 +76,7 @@ class TrainRunner(InferenceRunner):
     def _train_batch(self, batch):
         self.model.train()
         self.optimizer.zero_grad()
-        img = batch['input']
+        img = batch['image']
         if self.use_gpu:
             img = img.cuda()
         pred = self.model(img)
@@ -110,7 +110,7 @@ class TrainRunner(InferenceRunner):
 
             boxes = self.postprocessor(batch, pred)
             res = self.metric.validate_measure(batch, boxes)
-            # self.logger.info(f'EVAL!!! \n {res}')
+            self.logger.info(f'EVAL!!! \n {res}')
 
     def __call__(self):
         self.metric.reset()
@@ -135,18 +135,14 @@ class TrainRunner(InferenceRunner):
                         and self.val_dataloader:
                     self._validate_epoch()
                     self.metric.reset()
-
+                if (self.iter + 1) % self.snapshot_interval == 0:
+                    self.save_checkpoint(dir_=self.workdir,
+                                         filename=f'iter{self.iter + 1}.pth',)
                 if self.iter >= self.max_iterations:
                     flag = False
                     break
             if not iter_based:
                 self.lr_scheduler.step()
-
-                #   if (iters + 1) % self.snapshot_interval == 0:
-                #     self.save_model(out_dir=self.workdir,
-                #                     filename=f'iter{iters + 1}.pth',
-                #                     iteration=iters,
-                #                     )
 
     @property
     def epoch(self):

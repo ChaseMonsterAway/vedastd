@@ -4,29 +4,28 @@ norm_cfg = dict(type='BN')
 kernel_num = 7
 
 # 9. device
-inference = dict(
+deploy = dict(
     gpu_id='0',
     transforms=[
-        dict(type='LongestMaxSize', max_size=640, interpolation='nearest',p=0.5),
-        dict(type='PadIfNeeded', factor=32, pad_value=0),
-        dict(type='FilterKeys',
-             need_keys=['polygon', 'tags', 'shape', 'input', 'ratio']),
-        dict(type='ToTensor', keys=['input']),
+        dict(type='LongestMaxSize', max_size=512, interpolation='nearest', p=1),
+        dict(type='PadIfNeeded', min_height=512, min_width=640, border_mode='constant',
+             value=0),
         dict(type='Normalize', mean=(123.675, 116.280, 103.530),
-             std=(58.395, 57.120, 57.375), key='input'),
+             std=(58.395, 57.120, 57.375), max_pixel_value=255),
+        dict(type='ToTensor'),
     ],
     postprocessor=dict(
         type='PsePostprocessor',
         debug=False,
         resize=True,
-        thresh=1.0,
+        thresh=0.5,
         min_kernel_area=5,
         max_candidates=10,
         min_area=50,
         name=('pred_text_map', 'pred_kernels_map'),
     ),
     model=dict(
-        type='PseNet',
+        type='GModel',
         backbone=dict(
             type='ResNet',
             arch='resnet18',
@@ -196,7 +195,7 @@ inference = dict(
 # 2. configuration for train/test
 root_workdir = 'workdir/'
 dataset_type = 'TxtDataset'
-dataset_root = 'datasets/icdar2015/'
+dataset_root = r'D:\DATA_ALL\STD\IC5'
 
 common = dict(
     seed=0,
@@ -215,13 +214,14 @@ common = dict(
 test = dict(
     data=dict(
         dataset=[dict(type=dataset_type,
-                      img_root=dataset_root + 'train_images',
-                      gt_root=dataset_root + 'train_gts',
-                      txt_file=dataset_root + 'train_list.txt',
+                      img_root=dataset_root + r'\ch4_training_images',
+                      gt_root=dataset_root + r'\ch4_training_localization_transcription_gt',
+                      txt_file=dataset_root + r'\train.txt',
                       )],
-        transforms=inference['transforms'],
+        transforms=deploy['transforms'],
         dataloader=dict(type='BaseDataloader',
-                        batch_size=1)
+                        batch_size=1,
+                        )
     )
 )
 ## 2.2 configuration for train
@@ -231,65 +231,57 @@ train = dict(
     data=dict(
         train=dict(
             dataset=[dict(type=dataset_type,
-                          img_root=dataset_root + 'train_images',
-                          gt_root=dataset_root + 'train_gts',
-                          txt_file=dataset_root + 'train_list.txt',
+                          img_root=dataset_root + r'\ch4_training_images',
+                          gt_root=dataset_root + r'\ch4_training_localization_transcription_gt',
+                          txt_file=dataset_root + r'\train.txt',
                           )],
             transforms=[
-                dict(type='MakeShrinkMap', ratios=[1.0], max_shr=20,
-                     min_text_size=8,
-                     prefix='text'),
-                dict(type='MakeShrinkMap',
-                     ratios=[0.9, 0.8, 0.7, 0.6, 0.5, 0.4],
-                     max_shr=20, min_text_size=8, prefix='kernels'),
-                dict(type='Resize', keep_ratio=True, size=(640, 640),
-                     img_mode='nearest'),
-                dict(type='PadIfNeeded', factor=32, pad_value=0),
-                # dict(type='Resize', keep_ratio=False, random_scale=True, size=(640, 640),
-                #      img_mode='cubic', mask_mode='nearest', max_size=1280,
-                #      scale_list=([0.5, 1.0, 2.0, 3.0])),
-                # dict(type='RandomFlip', p=0.5, horizontal=True, vertical=False),
-                # dict(type='RandomRotation', angles=(-10, 10), p=1),
-                # dict(type='RandomCrop', size=(640, 640), prefix='text'),
-                # dict(type='FilterKeys',
-                #     need_keys=['shape', 'input', 'text_map', 'text_mask', 'kernels_map',
-                #                'kernels_mask']),
-                dict(type='ToTensor',
-                     keys=['input', 'text_map', 'text_mask', 'kernels_map',
-                           'kernels_mask']),
-                # input value are 0-1
-                # dict(type='Normalize', mean=[0.485, 0.456, 0.406],
-                #      std=[0.229, 0.224, 0.225], key='input'),
-                # input value are 0-255
+                dict(type='MakeShrinkMap', ratios=[1.0], max_shr=20, min_text_size=8, p=1),
+                dict(type='MaskMarker', name='gt'),
+                dict(type='MakeShrinkMap', ratios=[0.9, 0.8, 0.7, 0.6, 0.5, 0.4],
+                     max_shr=20, min_text_size=8, p=1),
+                dict(type='MaskMarker', name='shrink'),
+                dict(type='LongestMaxSize', max_size=512, interpolation='bilinear', p=1),
+                dict(type='PadIfNeeded', min_height=512, min_width=640, border_mode='constant',
+                     value=0),
                 dict(type='Normalize', mean=(123.675, 116.280, 103.530),
-                     std=(58.395, 57.120, 57.375), key='input'),
+                     std=(58.395, 57.120, 57.375), max_pixel_value=255),
+                dict(type='FilterKeys', op_names=['tags', 'each_len']),
+                dict(type='ToTensor'),
+                dict(type='Grouping'),
             ],
-            dataloader=dict(type='BaseDataloader', batch_size=1),
+            collate_fn=dict(type='BaseCollate', stack_keys=['image', 'gt', 'shrink']),
+            dataloader=dict(type='BaseDataloader', batch_size=2),
         ),
         val=dict(
             dataset=[dict(type=dataset_type,
-                          img_root=dataset_root + 'train_images',
-                          gt_root=dataset_root + 'train_gts',
-                          txt_file=dataset_root + 'train_list.txt',
+                          img_root=dataset_root + r'\ch4_training_images',
+                          gt_root=dataset_root + r'\ch4_training_localization_transcription_gt',
+                          txt_file=dataset_root + r'\train.txt',
                           )],
-            transforms=inference['transforms'],
-            dataloader=dict(type='BaseDataloader', batch_size=1)
+            transforms=deploy['transforms'],
+            dataloader=dict(type='BaseDataloader', batch_size=2)
         ),
     ),
     criterion=[
-        dict(type='DiceLoss', eps=1e-6, pred_map='pred_text_map',
-             gt_map='text_map',
-             gt_mask='text_mask',
-             loss_weight=0.7, loss_name='text dice loss', ohem=False),
-        dict(type='MultiDiceLoss', eps=1e-6, score_map='pred_text_map',
-             pred_map='pred_kernels_map', gt_map='kernels_map',
-             gt_mask='text_mask', loss_weight=0.3,
+        dict(type='DiceLoss', eps=1e-6,
+             pred_map='pred_text_map',
+             target='gt',
+             loss_weight=0.7,
+             loss_name='text dice loss',
+             ohem=False),
+        dict(type='MultiDiceLoss',
+             eps=1e-6,
+             score_map='pred_text_map',
+             pred_map='pred_kernels_map',
+             target='shrink',
+             loss_weight=0.3,
              loss_name='kernels dice loss',
              ohem=False),
     ],
     optimizer=dict(
         type='SGD',
-        lr=0.001,
+        lr=0.01,
         momentum=0.99,
         weight_decay=5e-4,
     ),
@@ -302,6 +294,6 @@ train = dict(
     max_epochs=max_epoch,
     trainval_ratio=10,
     log_interval=1,
-    snapshot_interval=5,
+    snapshot_interval=20,
     save_best=True,
 )

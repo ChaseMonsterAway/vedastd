@@ -60,7 +60,7 @@ class MultiDiceLoss(BaseLoss):
 
     @staticmethod
     def mask_process(score_map, gt_mask):
-        assert score_map.shape == gt_mask.shape
+        # assert score_map.shape == gt_mask.shape
         if score_map.dim() == 4:
             score_map = score_map[:, 0, :, :]
             gt_mask = gt_mask[:, 0, :, :]
@@ -97,7 +97,7 @@ class MultiDiceLoss(BaseLoss):
         return sum(loss_kernels) / len(loss_kernels)
 
     def forward(self, pred, target):
-        # score_map shape b*1*wh
+        # score_map shape b*1*w*h
         score_map = pred[self.score_map]
         # pmap,tmap.shape == B*6*wh, tmask shape == b*1*wh
         pmap, tmap, tmask = self.extract_pairs(pred, target)

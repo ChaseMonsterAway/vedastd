@@ -8,6 +8,8 @@ import numpy as np
 
 from vedastd.transforms import build_transform
 
+import albumentations as alb
+
 if __name__ == '__main__':
     image = cv2.imread(r'D:\DATA_ALL\STD\IC5\ch4_test_images\img_1.jpg')
     polygon = [[790, 302, 903, 304, 902, 335, 790, 335],
@@ -18,7 +20,7 @@ if __name__ == '__main__':
                [636, 155, 661, 156, 662, 169, 636, 168]]
     polygon = [np.array(p).reshape(-1, 2) for p in polygon]
     tags = [True, True, False, True, False, True]
-    each_len = [0, 4, 4*2, 4*3, 4*4, 4*5]
+    each_len = [0, 4, 4 * 2, 4 * 3, 4 * 4, 4 * 5]
     # dummy_data = dict(input=image,
     #                   polygon=polygon,
     #                   tags=tags,
@@ -27,23 +29,40 @@ if __name__ == '__main__':
     #                   )
 
     tr = [
-        dict(type='MakeShrinkMap', ratios=[1], max_shr=0.4, min_text_size=4, p=1),
+        # dict(type='MakeShrinkMap', ratios=[1], max_shr=0.4, min_text_size=4, p=1),
+        # dict(type='MaskMarker', name='gt'),
+        # dict(type='MakeShrinkMap', ratios=[0.9, 0.8, 0.7], max_shr=0.4, min_text_size=4, p=1),
+        # dict(type='MaskMarker', name='shrink'),
+        # dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
+        # dict(type='FilterKeys', op_names=['tags', 'each_len']),
+        # dict(type='ToTensor'),
+        # dict(type='Grouping'),
+        #
+        dict(type='MakeShrinkMap', ratios=[1.0],
+             max_shr=20, min_text_size=8, p=1),
         dict(type='MaskMarker', name='gt'),
-        dict(type='MakeShrinkMap', ratios=[0.9, 0.8, 0.7], max_shr=0.4, min_text_size=4, p=1),
-        dict(type='MaskMarker', name='shrink'),
+        # dict(type='MakeShrinkMap', ratios=[0.9, 0.8],
+        #      max_shr=20, min_text_size=8, p=1),
+        # dict(type='MaskMarker', name='shrink'),
         dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
-        dict(type='FilterKeys', op_names=['tags', 'each_len']),
+        dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant',
+             value=0),
+        dict(type='MakeBoarderMap', shrink_ratio=0.8),
+        dict(type='MaskMarker', name='border'),
+        # dict(type='Normalize', mean=(123.675, 116.280, 103.530),
+        #      std=(58.395, 57.120, 57.375), max_pixel_value=255),
+        # dict(type='FilterKeys', op_names=['tags', 'each_len']),
         dict(type='ToTensor'),
-        dict(type='Grouping'),
+        dict(type='Grouping',channel_first=True),
     ]
     transforms = build_transform(tr)
-    tr_out = transforms(image=image, keypoints=np.array(polygon).reshape(-1, 2), tags=tags, each_len=each_len)
+    tr_out = transforms(image=image,  keypoints=np.array(polygon).reshape(-1, 2), tags=tags, each_len=each_len)
     cv2.imshow('1', tr_out['image'])
     for idx, mask in enumerate(tr_out['masks']):
-        cv2.imshow('%s'%(idx+2), mask)
-    cv2.waitKey()
+        cv2.imshow('%s' % (idx + 2), mask)
 
-    cv2.waitKey()
-
+        cv2.waitKey()
+    #
+    # cv2.waitKey()
 
     print('done')

@@ -1,4 +1,7 @@
+import pdb
+
 import torch
+import numpy as np
 
 from .base import Common
 from ..models import build_model
@@ -48,12 +51,20 @@ class InferenceRunner(Common):
 
     def __call__(self, batch):
         with torch.no_grad():
-            image = batch['input']
-            image = self.transform(image)
-            image = image.unsqueeze(0)
+            image = batch['image']
+            dummy_points = [[790, 302, 903, 304, 902, 335, 790, 335]]
+            aug = self.transform(image=image, keypoints=dummy_points)
+            image = aug['image'].unsqueeze(0)
+            aug['image'] = image
+            aug['shape'] = np.array(batch['shape'])
+
             if self.use_gpu:
                 image = image.cuda()
             pred = self.model(image)
-            boxes = self.postprocessor(batch, pred)
+            pdb.set_trace()
+            for key, value in aug.items():
+                if key != 'image':
+                    aug[key] = [aug[key]]
+            boxes = self.postprocessor(aug, pred)
 
         return boxes

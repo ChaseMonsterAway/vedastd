@@ -8,6 +8,7 @@ import numpy as np
 
 from ..logger import build_logger
 from ..dataloaders import build_dataloader
+from ..dataloaders.collate_fn import build_collate_fn
 from ..datasets import build_datasets
 from ..transforms import build_transform
 from ..metrics import build_metric
@@ -84,8 +85,9 @@ class Common(object):
         return build_postprocessor(cfg)
 
     def _build_dataloader(self, cfg):
-        transform = build_transform(cfg['transform'])
-        dataset = build_datasets(cfg['dataset'], dict(transform=transform))
-        dataloader = build_dataloader(cfg['dataloader'], dict(dataset=dataset))
+        transform = build_transform(cfg['transforms'])
+        dataset = build_datasets(cfg['dataset'], dict(transforms=transform))
+        collate_fn = build_collate_fn(cfg['collate_fn']) if cfg.get('collate_fn') else None
+        dataloader = build_dataloader(cfg['dataloader'], dict(dataset=dataset, collate_fn=collate_fn))
 
         return dataloader

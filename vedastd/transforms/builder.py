@@ -12,9 +12,9 @@ def build_transform(cfg):
         if TRANSFORMS.get(icfg.get('type')) is not None:
             tf = build_from_cfg(icfg, TRANSFORMS)
         elif hasattr(alb, icfg.get('type')):
-            if icfg.get('interpolation') and CV2_MODE.get(icfg.get('interpolation')):
+            if icfg.get('interpolation') and icfg.get('interpolation') in CV2_MODE:
                 icfg['interpolation'] = CV2_MODE[icfg.get('interpolation')]
-            if icfg.get('border_mode') and CV2_BORDER_MODE.get('border_mode'):
+            if icfg.get('border_mode') and icfg.get('border_mode') in CV2_BORDER_MODE:
                 icfg['border_mode'] = CV2_BORDER_MODE[icfg.get('border_mode')]
             tf = build_from_cfg(icfg, alb, mode='module')
 

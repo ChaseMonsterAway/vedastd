@@ -1,10 +1,12 @@
 import argparse
 import os
+import pdb
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
 
 import cv2
+import numpy as np
 
 from vedastd.runners import InferenceRunner
 from vedastd.utils import Config
@@ -37,10 +39,21 @@ def main():
         images = [os.path.join(args.image, name)
                   for name in os.listdir(args.image)]
     for img in images:
+        batch = {}
         image = cv2.imread(img)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        pred_str, probs = runner(image)
-        runner.logger.info('predict string: {} \t of {}'.format(pred_str, img))
+        batch['image'] = image
+        batch['shape'] = np.array(image.shape[:2])
+
+        boxes = runner(batch)
+        for box in boxes:
+            for b in box:
+                print(b)
+                print(type(b))
+                cv2.rectangle(image, (367, 365),
+                              (495, 240), (0, 255, 0), 2)
+        cv2.imshow('g', image)
+        cv2.waitKey()
+        pdb.set_trace()
 
 
 if __name__ == '__main__':

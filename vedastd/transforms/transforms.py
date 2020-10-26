@@ -123,8 +123,10 @@ class MakeShrinkMap(alb.NoOp):
 
             shrink_maps.append(current_shrink_map)
             mask_maps.append(current_mask_map)
-
-        kwargs['masks'] = shrink_maps + mask_maps
+        if kwargs.get('masks') and kwargs['masks']:
+            kwargs['masks'] = kwargs['masks'] + shrink_maps + mask_maps
+        else:
+            kwargs['masks'] = shrink_maps + mask_maps
 
         return kwargs
 
@@ -264,19 +266,24 @@ class ToTensor(alb.DualTransform):
         super(ToTensor, self).__init__(always_apply=always_apply, p=p)
 
     def apply(self, img, **params):
-        # img np.ndarray
         img = torch.from_numpy(img).permute(2, 0, 1)
+
         return img
 
     def apply_to_mask(self, img, **params):
-        img = torch.from_numpy(img)
+        if img.ndim == 2:
+            img = torch.from_numpy(img).unsqueeze(0)
+        else:
+            img = torch.from_numpy(img).permute(2, 0, 1)
+
         return img
 
     def apply_to_keypoint(self, keypoint, **params):
-        return torch.from_numpy(np.array(keypoint))
+
+        return keypoint
 
     def apply_to_keypoints(self, keypoints, **params):
-        return torch.stack([self.apply_to_keypoint(keypoint) for keypoint in keypoints])
+        return keypoints
 
 
 @TRANSFORMS.register_module
@@ -301,15 +308,204 @@ class FilterKeys(alb.NoOp):
 class Grouping(alb.NoOp):
     """Grouping is used to divide masks in different groups based on MaskMarker."""
 
-    def __init__(self):
+    def __init__(self, channel_first=True):
         super(Grouping, self).__init__(always_apply=True, p=1)
+        self.channel_first = channel_first
 
     def __call__(self, force_apply=False, **kwargs):
-
         assert 'masks' in kwargs
         groups = {}
         assert len(MaskMarker.get_names()) == len(MaskMarker.get_index()) - 1
         for idx, (name, midx) in enumerate(zip(MaskMarker.get_names(), MaskMarker.get_index()[1:])):
-            groups[name] = kwargs.get('masks')[MaskMarker.get_index()[idx]:midx]
+            axis = 0 if self.channel_first else -1
+            groups[name] = np.concatenate(kwargs.get('masks')[MaskMarker.get_index()[idx]:midx], axis=axis)
+
         kwargs.update(**groups)
         return kwargs
+
+
+@TRANSFORMS.register_module
+class PadIfNeeded(alb.PadIfNeeded):
+    def __init__(self, min_height=1024,
+                 min_width=1024,
+                 border_mode=cv2.BORDER_REFLECT_101,
+                 value=None,
+                 mask_value=None,
+                 always_apply=False,
+                 p=1.0, ):
+        border_mode = CV2_BORDER_MODE[border_mode]
+
+        super(PadIfNeeded, self).__init__(min_height=min_height,
+                                          min_width=min_width,
+                                          border_mode=border_mode,
+                                          value=value,
+                                          mask_value=mask_value,
+                                          always_apply=always_apply,
+                                          p=p,
+                                          )
+
+    def update_params(self, params, **kwargs):
+        params = super(PadIfNeeded, self).update_params(params, **kwargs)
+        rows = params["rows"]
+        cols = params["cols"]
+
+        if rows < self.min_height:
+            h_pad_top = 0
+            h_pad_bottom = self.min_height - rows - h_pad_top
+        else:
+            h_pad_top = 0
+            h_pad_bottom = 0
+
+        if cols < self.min_width:
+            w_pad_left = 0
+            w_pad_right = self.min_width - cols - w_pad_left
+        else:
+            w_pad_left = 0
+            w_pad_right = 0
+
+        params.update(
+            {"pad_top": h_pad_top, "pad_bottom": h_pad_bottom, "pad_left": w_pad_left, "pad_right": w_pad_right}
+        )
+        return params
+
+    def __call__(self, force_apply=False, **kwargs):
+        h, w = kwargs['image'].shape[:2]
+        kwargs = super().__call__(force_apply, **kwargs)
+        kwargs['resized_shape'] = np.array([h, w])
+        each_len = kwargs.get('each_len', None)
+        if each_len:
+            polygon = [np.array(kwargs['keypoints'][each_len[i - 1]:each_len[i]])[:,:2].reshape(-1, 2) for i in
+                       range(1, len(each_len))]
+            kwargs['polygon'] = polygon
+
+        return kwargs
+
+
+@TRANSFORMS.register_module
+class MakeBoarderMap(alb.NoOp):
+
+    def __init__(self, shrink_ratio, thresh_min=0.3, thresh_max=0.7, always_apply=False, p=1):
+        super(MakeBoarderMap, self).__init__(always_apply=always_apply, p=p)
+        self.shrink_ratio = shrink_ratio
+        self.thresh_min = thresh_min
+        self.thresh_max = thresh_max
+
+    def __call__(self, force_apply=False, **kwargs):
+
+        image = kwargs['image']
+        polygons = kwargs['polygon']
+        tags = kwargs['tags']
+        h, w = image.shape[:2]
+        canvas = np.zeros((h, w, 1), dtype=np.float32)
+        mask = np.zeros((h, w, 1), dtype=np.float32)
+
+        for i in range(len(polygons)):
+            if not tags[i]:
+                continue
+            self.draw_border_map(polygons[i], canvas[:, :, 0],
+                                 mask=mask[:, :, 0])
+        canvas = canvas * (
+                self.thresh_max - self.thresh_min) + self.thresh_min
+        if kwargs.get('masks') and kwargs.get('masks') is not None:
+            kwargs['masks'] = kwargs['masks'] + [canvas, mask]
+        else:
+            kwargs['masks'] += [canvas, mask]
+        # data['boarder_map'] = canvas
+        # data['boarder_mask'] = mask
+        #
+        # data['mask_type'].append('boarder_map')
+        # data['mask_type'].append('boarder_mask')
+
+        return kwargs
+
+    def draw_border_map(self, polygon, canvas, mask):
+        polygon = np.array(polygon)
+        assert polygon.ndim == 2
+        assert polygon.shape[1] == 2
+
+        polygon_shape = Polygon(polygon)
+        distance = polygon_shape.area * \
+                   (1 - np.power(self.shrink_ratio, 2)) / polygon_shape.length
+        subject = [tuple(l) for l in polygon]
+        padding = pyclipper.PyclipperOffset()
+        padding.AddPath(subject, pyclipper.JT_ROUND,
+                        pyclipper.ET_CLOSEDPOLYGON)
+        padded_polygon = np.array(padding.Execute(distance)[0])
+        cv2.fillPoly(mask, [padded_polygon.astype(np.int32)], 1.0)
+
+        xmin = padded_polygon[:, 0].min()
+        xmax = padded_polygon[:, 0].max()
+        ymin = padded_polygon[:, 1].min()
+        ymax = padded_polygon[:, 1].max()
+        width = xmax - xmin + 1
+        height = ymax - ymin + 1
+
+        polygon[:, 0] = polygon[:, 0] - xmin
+        polygon[:, 1] = polygon[:, 1] - ymin
+
+        xs = np.broadcast_to(
+            np.linspace(0, width - 1, num=width).reshape(1, width),
+            (height, width))
+        ys = np.broadcast_to(
+            np.linspace(0, height - 1, num=height).reshape(height, 1),
+            (height, width))
+
+        distance_map = np.zeros(
+            (polygon.shape[0], height, width), dtype=np.float32)
+        for i in range(polygon.shape[0]):
+            j = (i + 1) % polygon.shape[0]
+            absolute_distance = self.distance(xs, ys, polygon[i], polygon[j])
+            distance_map[i] = np.clip(absolute_distance / distance, 0, 1)
+        distance_map = distance_map.min(axis=0)
+
+        xmin_valid = min(max(0, xmin), canvas.shape[1] - 1)
+        xmax_valid = min(max(0, xmax), canvas.shape[1] - 1)
+        ymin_valid = min(max(0, ymin), canvas.shape[0] - 1)
+        ymax_valid = min(max(0, ymax), canvas.shape[0] - 1)
+        canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1] = np.fmax(
+            1 - distance_map[
+                ymin_valid - ymin:ymax_valid - ymax + height,
+                xmin_valid - xmin:xmax_valid - xmax + width],
+            canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1])
+
+    def distance(self, xs, ys, point_1, point_2):
+        '''
+        compute the distance from point to a line
+        ys: coordinates in the first axis
+        xs: coordinates in the second axis
+        point_1, point_2: (x, y), the end of the line
+        '''
+        height, width = xs.shape[:2]
+        square_distance_1 = np.square(
+            xs - point_1[0]) + np.square(ys - point_1[1])
+        square_distance_2 = np.square(
+            xs - point_2[0]) + np.square(ys - point_2[1])
+        square_distance = np.square(
+            point_1[0] - point_2[0]) + np.square(point_1[1] - point_2[1])
+
+        cosin = (square_distance - square_distance_1 - square_distance_2) / \
+                (2 * np.sqrt(square_distance_1 * square_distance_2))
+        square_sin = 1 - np.square(cosin)
+        square_sin = np.nan_to_num(square_sin)
+        result = np.sqrt(square_distance_1 * square_distance_2 *
+                         square_sin / square_distance)
+
+        result[cosin < 0] = np.sqrt(np.fmin(
+            square_distance_1, square_distance_2))[cosin < 0]
+
+        return result
+
+    def extend_line(self, point_1, point_2, result):
+        ex_point_1 = (int(round(
+            point_1[0] + (point_1[0] - point_2[0]) * (1 + self.shrink_ratio))),
+                      int(round(point_1[1] + (point_1[1] - point_2[1]) * (
+                              1 + self.shrink_ratio))))
+        cv2.line(result, tuple(ex_point_1), tuple(point_1),
+                 4096.0, 1, lineType=cv2.LINE_AA, shift=0)
+        ex_point_2 = (int(round(
+            point_2[0] + (point_2[0] - point_1[0]) * (1 + self.shrink_ratio))),
+                      int(round(point_2[1] + (point_2[1] - point_1[1]) * (
+                              1 + self.shrink_ratio))))
+        cv2.line(result, tuple(ex_point_2), tuple(point_2),
+                 4096.0, 1, lineType=cv2.LINE_AA, shift=0)
+        return ex_point_1, ex_point_2

@@ -65,6 +65,7 @@ class TxtDataset(BaseDataset):
             results = self.transforms(image=image, keypoints=polys, masks=None, each_len=each_len, tags=tags)
 
         results['shape'] = np.array(shape[:2])
-        results['tags'] = np.array(tags)
+        results['init_polygon'] = [np.array(polys[each_len[i - 1]:each_len[i]])[:, :2]
+                                   for i in range(1, len(each_len))]
 
         return results

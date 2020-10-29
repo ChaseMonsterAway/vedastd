@@ -43,8 +43,8 @@ class QuadMeasurer:
             else:
                 pred = []
                 for i in range(pred_polygons.shape[0]):
-                    if pred_scores[i] >= self.box_thresh:
-                        pred.append(dict(points=pred_polygons[i, :, :].tolist()))
+                    assert pred_scores[i] >= self.box_thresh
+                    pred.append(dict(points=pred_polygons[i, :, :].tolist()))
             results.append(self.evaluator.evaluate_image(gt, pred))
         return results
 

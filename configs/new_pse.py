@@ -242,7 +242,7 @@ train = dict(
                      max_shr=20, min_text_size=8, p=1),
                 dict(type='MaskMarker', name='shrink'),
                 dict(type='LongestMaxSize', max_size=512, interpolation='bilinear', p=1),
-                dict(type='PadIfNeeded', min_height=512, min_width=640, border_mode='constant',
+                dict(type='PadIfNeeded', min_height=512, min_width=512, border_mode='constant',
                      value=0),
                 dict(type='Normalize', mean=(123.675, 116.280, 103.530),
                      std=(58.395, 57.120, 57.375), max_pixel_value=255),
@@ -282,7 +282,7 @@ train = dict(
     optimizer=dict(
         type='SGD',
         lr=0.01,
-        momentum=0.99,
+        momentum=0.9,
         weight_decay=5e-4,
     ),
     lr_scheduler=dict(

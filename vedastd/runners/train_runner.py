@@ -1,4 +1,5 @@
 import os
+import pdb
 from collections import OrderedDict
 from collections.abc import Iterable
 
@@ -24,9 +25,8 @@ class TrainRunner(InferenceRunner):
         else:
             self.val_dataloader = None
 
-        print(len(self.train_dataloader))
-        print(len(self.val_dataloader))
-
+        if 'postprocessor' in train_cfg:
+            self.postprocessor = self._build_postprocessor(train_cfg['postprocessor'])
         self.max_iterations = train_cfg.get('max_iterations', False)
         self.max_epochs = train_cfg.get('max_epochs', False)
         assert self.max_epochs ^ self.max_iterations, \
@@ -72,6 +72,7 @@ class TrainRunner(InferenceRunner):
         self.metric.reset()
         for batch in self.val_dataloader:
             self._validate_batch(batch)
+        self.logger.info(f'Evaluation \n {self.metric.metrics}')
 
     def _train_batch(self, batch):
         self.model.train()
@@ -88,39 +89,33 @@ class TrainRunner(InferenceRunner):
         loss.backward()
         self.optimizer.step()
 
-        with torch.no_grad():
-            boxes = self.postprocessor(batch, pred)
-            res = self.metric.validate_measure(batch, boxes)
-
         if self.iter % self.log_interval == 0:
-            # self.logger.info(f'{res}')
+            with torch.no_grad():
+                boxes = self.postprocessor(batch, pred, training=True)
+            self.metric.measure(batch, boxes, training=True)
+            self.logger.info(f'{self.metric.metrics}')
             self.logger.info(
                 f'Train, epoch: {self.epoch}, Iter {self.iter}, LR {self.lr} loss {loss.item()}')
-
-            # for key, value in loss_infos.items():
-            #     self.logger.info(f'{key}:\t{value}')
+            for key, value in loss_infos.items():
+                self.logger.info(f'{key}:\t{value}')
 
     def _validate_batch(self, batch):
         self.model.eval()
         with torch.no_grad():
-            img = batch['input']
+            img = batch['image']
             if self.use_gpu:
                 img = img.cuda()
             pred = self.model(img)
-
-            boxes = self.postprocessor(batch, pred)
-            res = self.metric.validate_measure(batch, boxes)
-            self.logger.info(f'EVAL!!! \n {res}')
+            boxes = self.postprocessor(batch, pred, training=False)
+            self.metric.measure(batch, boxes, training=False)
 
     def __call__(self):
         self.metric.reset()
         self.logger.info('Start train...')
 
         iter_based = self.lr_scheduler._iter_based
-        if hasattr(self.lr_scheduler, 'warmup_iters'):
-            warmup_iters = self.lr_scheduler.warmup_iters
-        else:
-            warmup_iters = 0
+        warmup_iters = self.lr_scheduler.warmup_iters
+
         flag = True
         while flag:
             for iters, batch in enumerate(self.train_dataloader):
@@ -131,13 +126,13 @@ class TrainRunner(InferenceRunner):
                 elif warmup_iters > 0 and warmup_iters >= self.iter:
                     self.lr_scheduler.step()
                 if self.trainval_ratio > 0 \
-                        and (iters + 1) % self.trainval_ratio == 0 \
+                        and (self.iter + 1) % self.trainval_ratio == 0 \
                         and self.val_dataloader:
                     self._validate_epoch()
                     self.metric.reset()
                 if (self.iter + 1) % self.snapshot_interval == 0:
                     self.save_checkpoint(dir_=self.workdir,
-                                         filename=f'iter{self.iter + 1}.pth',)
+                                         filename=f'iter{self.iter + 1}.pth', )
                 if self.iter >= self.max_iterations:
                     flag = False
                     break

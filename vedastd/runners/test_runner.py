@@ -19,8 +19,8 @@ class TestRunner(InferenceRunner):
             pred = self.model(img)
             if self.postprocessor:
 
-                boxes = self.postprocessor(batch, pred)
-                res = self.metric.validate_measure(batch, boxes)
+                boxes = self.postprocessor(batch, pred, training=False)
+                res = self.metric.validate_measure(batch, boxes, training=False)
         return res
 
     def __call__(self):

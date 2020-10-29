@@ -1,14 +1,13 @@
 # config for inference
 
 norm_cfg = dict(type='BN')
-kernel_num = 7
 
 # 9. device
 deploy = dict(
     gpu_id='0',
     transforms=[
-        dict(type='LongestMaxSize', max_size=512, interpolation='nearest', p=1),
-        dict(type='PadIfNeeded', min_height=512, min_width=640, border_mode='constant',
+        dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
+        dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant',
              value=0),
         dict(type='Normalize', mean=(123.675, 116.280, 103.530),
              std=(58.395, 57.120, 57.375), max_pixel_value=255),
@@ -16,6 +15,11 @@ deploy = dict(
     ],
     postprocessor=dict(
         type='Postprocessor',
+        min_size=1,
+        thresh=0.3,
+        box_thresh=0.3,
+        name='binary_map',
+        unclip_ratio=0.1,
     ),
     model=dict(
         type='GModel',
@@ -181,7 +185,7 @@ common = dict(
     ),
     cudnn_deterministic=False,
     cudnn_benchmark=True,
-    metric=dict(type='QuadMeasurer', polygon=False, box_thresh=0.6),
+    metric=dict(type='QuadMeasurer', polygon=False),
 )
 
 ## 2.1 configuration for test
@@ -191,15 +195,16 @@ test = dict(
                       img_root=dataset_root + r'\ch4_training_images',
                       gt_root=dataset_root + r'\ch4_training_localization_transcription_gt',
                       txt_file=dataset_root + r'\train.txt',
+                      ignore_tag='###',
                       )],
         transforms=deploy['transforms'],
         dataloader=dict(type='BaseDataloader',
-                        batch_size=1,
+                        batch_size=2,
                         )
     )
 )
 ## 2.2 configuration for train
-max_epoch = 100
+max_epoch = 200
 max_iterations = 200
 train = dict(
     data=dict(
@@ -208,20 +213,21 @@ train = dict(
                           img_root=dataset_root + r'\ch4_training_images',
                           gt_root=dataset_root + r'\ch4_training_localization_transcription_gt',
                           txt_file=dataset_root + r'\train.txt',
+                          ignore_tag='###',
                           )],
             transforms=[
-                dict(type='MakeShrinkMap', ratios=[1.0], max_shr=0.6, min_text_size=8, p=1),
-                dict(type='MaskMarker', name='gt'),
-                dict(type='LongestMaxSize', max_size=512, interpolation='bilinear', p=1),
-                dict(type='PadIfNeeded', min_height=512, min_width=640, border_mode='constant',
+                dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
+                dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant',
                      value=0),
-                dict(type='MakeBoarderMap', shrink_ratio=0.4, p=1),
+                dict(type='KeypointsToPolygon'),
+                dict(type='MakeShrinkMap', ratios=[1.0], max_shr=0.6, min_text_size=4, p=1),
+                dict(type='MaskMarker', name='gt'),
+                dict(type='MakeBorderMap', shrink_ratio=0.4),
                 dict(type='MaskMarker', name='border'),
                 dict(type='Normalize', mean=(123.675, 116.280, 103.530),
                      std=(58.395, 57.120, 57.375), max_pixel_value=255),
-                dict(type='FilterKeys', op_names=['tags', 'each_len']),
+                dict(type='Grouping', channel_first=False),
                 dict(type='ToTensor'),
-                dict(type='Grouping'),
             ],
             collate_fn=dict(type='BaseCollate', stack_keys=['image', 'gt', 'border']),
             dataloader=dict(type='BaseDataloader', batch_size=2),
@@ -231,8 +237,10 @@ train = dict(
                           img_root=dataset_root + r'\ch4_training_images',
                           gt_root=dataset_root + r'\ch4_training_localization_transcription_gt',
                           txt_file=dataset_root + r'\train.txt',
+                          ignore_tag='###',
                           )],
             transforms=deploy['transforms'],
+            collate_fn=dict(type='BaseCollate', stack_keys=['image']),
             dataloader=dict(type='BaseDataloader', batch_size=2)
         ),
     ),
@@ -247,18 +255,23 @@ train = dict(
     optimizer=dict(
         type='SGD',
         lr=0.01,
-        momentum=0.99,
+        momentum=0.9,
         weight_decay=5e-4,
     ),
     lr_scheduler=dict(
-        type='StepLR',
-        milestones=[600, 1200],
-        gamma=0.1),
-    resume=None,
-    max_iterations=max_iterations,
+        type='ConstantLR',
+    ),
+    postprocess=dict(type='Postprocessor',
+                     thresh=0.3,
+                     box_thresh=0.3,
+                     name='binary_map',
+                     min_size=1,
+                     unclip_ratio=0.1,
+                     ),
     max_epochs=max_epoch,
     trainval_ratio=10,
     log_interval=1,
     snapshot_interval=20,
     save_best=True,
+    resume=None,
 )

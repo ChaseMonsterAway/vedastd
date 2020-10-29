@@ -1,12 +1,11 @@
 import logging
 import threading
-from collections import OrderedDict
 
 import albumentations as alb
 import cv2
 import numpy as np
-import torch
 import pyclipper
+import torch
 from shapely.geometry import Polygon
 
 from .registry import TRANSFORMS
@@ -30,6 +29,7 @@ logger = logging.getLogger('Transforms')
 
 @TRANSFORMS.register_module
 class MaskMarker(alb.NoOp):
+    """To assign name and record the masks made."""
     _mask_index = [0]
     _names = []
     _instance_lock = threading.Lock()
@@ -53,8 +53,10 @@ class MaskMarker(alb.NoOp):
                     MaskMarker._instance = super().__new__(cls)
                     MaskMarker._hooker_count += 1
         if kwargs.get('name'):
-            assert kwargs.get('name') not in MaskMarker._names
-            MaskMarker._names.append(kwargs.get('name'))
+            if kwargs.get('name') not in MaskMarker._names:
+                MaskMarker._names.append(kwargs.get('name'))
+            else:
+                logger.info(f"{kwargs.get('name')} has already existed. Please use another name.")
         else:
             MaskMarker._names.append(cls._hooker_count)
 
@@ -87,6 +89,8 @@ class MakeShrinkMap(alb.NoOp):
         self.min_text_size = min_text_size
 
     def __call__(self, force_apply=False, **kwargs):
+        # TODO, MAKE IT MORE ELEGANTLY. SO DO MAKEBORDERMAP.
+        # TODO, CONSIDERING FUSION CLASS MAKESHRINKMAP & CLASS MAKEBORDERMAP.
         keypoints = kwargs.get('keypoints')
         each_len = kwargs.get('each_len')
         poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2] for i in range(1, len(each_len))]
@@ -140,6 +144,20 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
         self.min_crop_side_ratio = 0.2
 
         super(RandomCropBasedOnBox, self).__init__(always_apply=always_apply, p=p)
+        self._crop_area = []
+
+    def __call__(self, force_apply=False, **kwargs):
+        kwargs = super(RandomCropBasedOnBox, self).__call__(force_apply, **kwargs)
+        keypoints = kwargs['keypoints']
+        each_len = kwargs['each_len']
+        poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
+                for i in range(1, len(each_len))]
+        tags = kwargs['tags']
+        for idx, p in enumerate(poly):
+            if tags[idx]:
+                if self.is_poly_outside_rect(p, *self._crop_area):
+                    kwargs['tags'][idx] = False
+        return kwargs
 
     @property
     def targets_as_params(self):
@@ -158,6 +176,7 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
                 all_care_polys.append(line)
 
         crop_x, crop_y, crop_w, crop_h = self.crop_area(img, all_care_polys)
+        self._crop_area = [crop_x, crop_y, crop_w, crop_h]
 
         return {"x_min": crop_x, "x_max": crop_x + crop_w, "y_min": crop_y, "y_max": crop_y + crop_h}
 
@@ -278,12 +297,16 @@ class ToTensor(alb.DualTransform):
 
         return img
 
-    def apply_to_keypoint(self, keypoint, **params):
-
-        return keypoint
-
     def apply_to_keypoints(self, keypoints, **params):
         return keypoints
+
+    def __call__(self, force_apply=False, **kwargs):
+        kwargs = super(ToTensor, self).__call__(force_apply, **kwargs)
+        if MaskMarker.get_names():
+            for name in MaskMarker.get_names():
+                if name in kwargs:
+                    kwargs[name] = self.apply_to_mask(kwargs[name])
+        return kwargs
 
 
 @TRANSFORMS.register_module
@@ -318,7 +341,10 @@ class Grouping(alb.NoOp):
         assert len(MaskMarker.get_names()) == len(MaskMarker.get_index()) - 1
         for idx, (name, midx) in enumerate(zip(MaskMarker.get_names(), MaskMarker.get_index()[1:])):
             axis = 0 if self.channel_first else -1
-            groups[name] = np.concatenate(kwargs.get('masks')[MaskMarker.get_index()[idx]:midx], axis=axis)
+            if isinstance(kwargs['image'], torch.Tensor):
+                groups[name] = torch.cat(kwargs['masks'][MaskMarker.get_index()[idx]:midx], axis=axis)
+            else:
+                groups[name] = np.concatenate(kwargs['masks'][MaskMarker.get_index()[idx]:midx], axis=axis)
 
         kwargs.update(**groups)
         return kwargs
@@ -372,25 +398,48 @@ class PadIfNeeded(alb.PadIfNeeded):
         h, w = kwargs['image'].shape[:2]
         kwargs = super().__call__(force_apply, **kwargs)
         kwargs['resized_shape'] = np.array([h, w])
-        each_len = kwargs.get('each_len', None)
-        if each_len:
-            polygon = [np.array(kwargs['keypoints'][each_len[i - 1]:each_len[i]])[:,:2].reshape(-1, 2) for i in
-                       range(1, len(each_len))]
-            kwargs['polygon'] = polygon
+        if 'polygon' in kwargs:
+            poly = kwargs['polygon']
+            tags = kwargs['tags']
+            for idx, p in enumerate(poly):
+                if tags[idx]:
+                    if np.any(p[:, 0] < 0) or np.any(p[:, 0] > w) or np.any(p[:, 1] < 0) or np.any(p[:, 1] > h):
+                        kwargs['tags'][idx] = False
 
         return kwargs
 
 
 @TRANSFORMS.register_module
-class MakeBoarderMap(alb.NoOp):
+class KeypointsToPolygon(alb.NoOp):
+    """This class is used to update the polygon based on keypoints. If you do any other
+    transforms after KeypointsToPolygon, you can recall KeypointsToPolygon to generate a
+    new polygon."""
 
-    def __init__(self, shrink_ratio, thresh_min=0.3, thresh_max=0.7, always_apply=False, p=1):
-        super(MakeBoarderMap, self).__init__(always_apply=always_apply, p=p)
+    def __init__(self, *args, **kwargs):
+        super(KeypointsToPolygon, self).__init__(p=1)
+
+    def __call__(self, force_apply=False, **kwargs):
+        assert 'each_len' in kwargs
+        each_len = kwargs['each_len']
+        polygon = [np.array(kwargs['keypoints'][each_len[i - 1]:each_len[i]])[:, :2].reshape(-1, 2)
+                   for i in range(1, len(each_len))]
+        kwargs['polygon'] = polygon
+
+        return kwargs
+
+
+@TRANSFORMS.register_module
+class MakeBorderMap(alb.NoOp):
+    """Make border map for [db](https://arxiv.org/pdf/1911.08947.pdf). """
+
+    def __init__(self, shrink_ratio, thresh_min=0.3, thresh_max=0.7):
+        super(MakeBorderMap, self).__init__(p=1)
         self.shrink_ratio = shrink_ratio
         self.thresh_min = thresh_min
         self.thresh_max = thresh_max
 
     def __call__(self, force_apply=False, **kwargs):
+        # TODO, USE OTHER METHODS TO REPRODUCE POLYGON LOCATIONS. CURRENTLY, IT LOOKS AWFUL.
 
         image = kwargs['image']
         polygons = kwargs['polygon']
@@ -402,19 +451,19 @@ class MakeBoarderMap(alb.NoOp):
         for i in range(len(polygons)):
             if not tags[i]:
                 continue
-            self.draw_border_map(polygons[i], canvas[:, :, 0],
-                                 mask=mask[:, :, 0])
+            try:
+                self.draw_border_map(polygons[i], canvas[:, :, 0],
+                                     mask=mask[:, :, 0])
+            except:
+                assert np.any(polygons[i][:, 1] <= 0) or np.any(polygons[i][:, 0] <= 0)
+                tags[i] = False
+                continue
         canvas = canvas * (
                 self.thresh_max - self.thresh_min) + self.thresh_min
         if kwargs.get('masks') and kwargs.get('masks') is not None:
             kwargs['masks'] = kwargs['masks'] + [canvas, mask]
         else:
-            kwargs['masks'] += [canvas, mask]
-        # data['boarder_map'] = canvas
-        # data['boarder_mask'] = mask
-        #
-        # data['mask_type'].append('boarder_map')
-        # data['mask_type'].append('boarder_mask')
+            kwargs['masks'] = [canvas, mask]
 
         return kwargs
 

@@ -61,10 +61,9 @@ class InferenceRunner(Common):
             if self.use_gpu:
                 image = image.cuda()
             pred = self.model(image)
-            pdb.set_trace()
             for key, value in aug.items():
                 if key != 'image':
                     aug[key] = [aug[key]]
-            boxes = self.postprocessor(aug, pred)
+            boxes = self.postprocessor(aug, pred, training=False)
 
-        return boxes
+        return boxes, aug

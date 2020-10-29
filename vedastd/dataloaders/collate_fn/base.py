@@ -1,4 +1,3 @@
-import pdb
 from collections import OrderedDict
 
 import numpy as np
@@ -18,10 +17,10 @@ class BaseCollate:
             for k, v in sample.items():
                 if k not in data_dict:
                     data_dict[k] = []
-                if isinstance(v, np.ndarray):
+                if isinstance(v, np.ndarray) and k in self.stack_keys:
                     v = torch.from_numpy(v)
                 data_dict[k].append(v)
-        # data_dict['image'] = torch.stack(data_dict['image'], 0)
+
         for key, value in data_dict.items():
             if key in self.stack_keys:
                 data_dict[key] = torch.stack(data_dict[key], 0)

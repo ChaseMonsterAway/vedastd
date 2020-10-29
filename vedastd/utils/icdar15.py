@@ -130,7 +130,7 @@ class DetectionIoUEvaluator(object):
 
             for gtNum in range(len(gtPols)):
                 for detNum in range(len(detPols)):
-                    if gtRectMat[gtNum] == 0 and detRectMat[detNum] == 0\
+                    if gtRectMat[gtNum] == 0 and detRectMat[detNum] == 0 \
                             and gtNum not in gtDontCarePolsNum and detNum not in detDontCarePolsNum:
                         if iouMat[gtNum, detNum] > self.iou_constraint:
                             gtRectMat[gtNum] = 1
@@ -140,7 +140,8 @@ class DetectionIoUEvaluator(object):
                             detMatchedNums.append(detNum)
                             evaluationLog += "Match GT #" + \
                                              str(gtNum) + " with Det #" + str(detNum) + "\n"
-
+        print('#' * 20, 'iouMat', '#' * 20)
+        print(iouMat)
         numGtCare = (len(gtPols) - len(gtDontCarePolsNum))
         numDetCare = (len(detPols) - len(detDontCarePolsNum))
         if numGtCare == 0:
@@ -150,6 +151,10 @@ class DetectionIoUEvaluator(object):
             recall = float(detMatched) / numGtCare
             precision = 0 if numDetCare == 0 else float(
                 detMatched) / numDetCare
+        print('#' * 20, 'iouMat', '#' * 20)
+        print('$' * 20, 'recall, precision, fmean', '$' * 20)
+        print('recall,', recall, 'precision,', precision)
+        print('$' * 20, 'recall, precision, fmean', '$' * 20)
 
         hmean = 0 if (precision + recall) == 0 else 2.0 * \
                                                     precision * recall / (precision + recall)
@@ -184,7 +189,6 @@ class DetectionIoUEvaluator(object):
             numGlobalCareGt += result['gtCare']
             numGlobalCareDet += result['detCare']
             matchedSum += result['detMatched']
-
         methodRecall = 0 if numGlobalCareGt == 0 else float(
             matchedSum) / numGlobalCareGt
         methodPrecision = 0 if numGlobalCareDet == 0 else float(
@@ -208,7 +212,7 @@ if __name__ == '__main__':
     }, {
         'points': [(2, 2), (3, 2), (3, 3), (2, 3)],
         'text': 5678,
-        'ignore': False,
+        'ignore': True,
     }]]
     preds = [[{
         'points': [(0.1, 0.1), (1, 0), (1, 1), (0, 1)],
@@ -218,5 +222,6 @@ if __name__ == '__main__':
     results = []
     for gt, pred in zip(gts, preds):
         results.append(evaluator.evaluate_image(gt, pred))
+    print(results)
     metrics = evaluator.combine_results(results)
     print(metrics)

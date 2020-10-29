@@ -10,6 +10,7 @@ from vedastd.transforms import build_transform
 from vedastd.datasets import build_datasets
 from vedastd.dataloaders import build_dataloader
 from vedastd.dataloaders.collate_fn import build_collate_fn
+from tests.utils import tensor_to_numpy, show_polygon
 
 if __name__ == '__main__':
     image = cv2.imread(r'D:\DATA_ALL\STD\IC5\ch4_test_images\img_1.jpg')
@@ -23,13 +24,16 @@ if __name__ == '__main__':
     tags = [True, True, False, True, False, True]
     each_len = [0, 4, 4 * 2, 4 * 3, 4 * 4, 4 * 5]
     tr = [
+        dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
+        dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant',
+             value=0),
+        dict(type='KeypointsToPolygon'),
         dict(type='MakeShrinkMap', ratios=[1], max_shr=0.4, min_text_size=4, p=1),
         dict(type='MaskMarker', name='gt'),
         dict(type='MakeShrinkMap', ratios=[0.9, 0.8, 0.7], max_shr=0.4, min_text_size=4, p=1),
         dict(type='MaskMarker', name='shrink'),
-        dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
-        dict(type='PadIfNeeded', min_height=512, min_width=640, border_mode='constant',
-             value=0),
+        dict(type='ToTensor'),
+        dict(type='Grouping'),
     ]
     transforms = build_transform(tr)
 
@@ -40,23 +44,21 @@ if __name__ == '__main__':
                ignore_tag='###',
                )]
 
-    # tr_out = transforms(image=image, keypoints=np.array(polygon).reshape(-1, 2), tags=tags, each_len=each_len)
     collate_fn = dict(type='BaseCollate', stack_keys=['image', 'gt', 'shrink'])
+
     clf = build_collate_fn(collate_fn)
+
     dataset = build_datasets(dt, dict(transforms=transforms))
 
     dl = dict(type='BaseDataloader', batch_size=2)
     dataloader = build_dataloader(dl, dict(dataset=dataset, collate_fn=clf))
     for batch in dataloader:
         for idx in range(batch['image'].shape[0]):
-            image = batch['image'][idx].data.numpy()
-            # image = (image - np.min(image)) / (np.max(image) - np.min(image))
+            image = tensor_to_numpy(batch['image'][idx])
             image = image.astype(np.uint8)
             polygons = batch['polygon'][idx]
-            for polygon in polygons:
-                cv2.rectangle(image, (int(polygon[0, 0]), int(polygon[0, 1])),
-                              (int(polygon[2, 0]), int(polygon[2, 1])), (0, 255, 0), 2)
-            cv2.imshow('i', image)
+            show_polygon(image, polygons, batch['tags'][idx])
+            cv2.imshow('img', image)
             cv2.waitKey()
         print(batch.keys())
 

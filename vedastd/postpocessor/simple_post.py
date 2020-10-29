@@ -1,9 +1,9 @@
 import pdb
 
 import cv2
-import torch
 import numpy as np
 import pyclipper
+import torch
 from shapely.geometry import Polygon
 
 from .registry import POSTPROCESS
@@ -13,51 +13,47 @@ from .utils import pse
 @POSTPROCESS.register_module
 class Postprocessor:
     def __init__(self, thresh=0.3, box_thresh=0.7, max_candidates=100, unclip_ratio=1.5,
-                 resize=False, name='binary_map', min_size=3, debug=False):
+                 name='binary_map', min_size=3, debug=False):
         self.thresh = thresh
         self.box_thresh = box_thresh
         self.max_candidates = max_candidates
-        self.resize = resize
         self.dest = name
         self.ur = unclip_ratio
         self.min_size = min_size
         self.debug = debug
 
-    def __call__(self, batch, _pred):
-        images = batch['image']
-        # ratio = batch['ratio'].item()
-        pred = _pred[self.dest]
-        segmentation = self.binarize(pred)
+    def __call__(self, batch, _pred, training=False):
+        images: torch.Tensor = batch['image']
+        pred: torch.Tensor = _pred[self.dest]
+        segmentation: torch.Tensor = self.binarize(pred)
         boxes_batch = []
         scores_batch = []
         for batch_index in range(images.size(0)):
-            init_shape = batch['shape'][batch_index]
-            if isinstance(init_shape, torch.Tensor):
-                height, width = init_shape.data.numpy()
-            else:
-                height, width = init_shape
-            resize_shape = batch['resized_shape']
-            if isinstance(resize_shape, torch.Tensor):
-                resized_h, resized_w = resize_shape[batch_index].data.numpy()
-            else:
-                resized_h, resized_w = resize_shape[batch_index]
-            hscale = resized_h.data / height
-            wscale = resized_w.data / width
-            ratio = max(hscale, wscale)
+            init_shape: np.ndarray = batch['shape'][batch_index]
+            height, width = init_shape
 
-            height, width = batch['shape'][batch_index].data
-            # height, width = batch['shape'][batch_index].data.numpy()
+            resize_shape: np.ndarray = batch['resized_shape'][batch_index]
+            # if not training:
+            #     pdb.set_trace()
+            resized_h, resized_w = resize_shape
+            hscale = resized_h / height
+            wscale = resized_w / width
+            if training:
+                height, width = resized_h, resized_w
+                wscale, hscale = 1, 1
+
             boxes, scores = self.boxes_from_bitmap(
-                _pred['binary_map'][batch_index],
-                segmentation[batch_index], ratio, height, width)
+                _pred[self.dest][batch_index],
+                segmentation[batch_index], wscale, hscale, height, width)
             boxes_batch.append(boxes)
             scores_batch.append(scores)
         return boxes_batch, scores_batch
 
     def binarize(self, pred):
+        # cv2.imshow('pred', pred[0,0].cpu().numpy())
         return pred > self.thresh
 
-    def boxes_from_bitmap(self, pred, _bitmap, ratio, h, w):
+    def boxes_from_bitmap(self, pred, _bitmap, wscale, hscale, h, w):
         '''
         _bitmap: single map with shape (1, H, W),
             whose values are binarized as {0, 1}
@@ -75,7 +71,7 @@ class Postprocessor:
         if self.debug:
             bitmap = cv2.cvtColor(pred * 255, cv2.COLOR_GRAY2BGR)
 
-        # TO DO
+        # TODO, SELECT TOP SELF.MAX_CANDIDATES DIRECTLY
         for contour in contours[:self.max_candidates]:
             points, sside = self.get_mini_boxes(contour)
             if sside < self.min_size:
@@ -99,14 +95,9 @@ class Postprocessor:
             if sside < self.min_size + 2:
                 continue
             box = np.array(box)
-
-            if not self.resize:
-                ratio = 1
-
-            box[:, 0] = np.clip(
-                np.round(box[:, 0] / ratio), 0, w)
+            box[:, 0] = np.clip(np.round(box[:, 0] / wscale), 0, w)
             box[:, 1] = np.clip(
-                np.round(box[:, 1] / ratio), 0, h)
+                np.round(box[:, 1] / hscale), 0, h)
             boxes.append(np.array(box.tolist()))
 
         if self.debug:
@@ -189,6 +180,8 @@ class PsePostprocessor:
         outputs = torch.cat((_pred[self.dest[0]], _pred[self.dest[1]]), dim=1)
 
         score = torch.sigmoid(outputs[:, 0, :, :])
+        cv2.imshow('1', score[0].cpu().numpy())
+        cv2.waitKey()
         outputs = (torch.sign(outputs - self.binary_th) + 1) / 2
 
         text = outputs[:, 0, :, :]

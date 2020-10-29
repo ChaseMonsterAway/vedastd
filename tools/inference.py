@@ -44,16 +44,17 @@ def main():
         batch['image'] = image
         batch['shape'] = np.array(image.shape[:2])
 
-        boxes = runner(batch)
-        for box in boxes:
-            for b in box:
-                print(b)
-                print(type(b))
-                cv2.rectangle(image, (367, 365),
-                              (495, 240), (0, 255, 0), 2)
+        outputs, aug = runner(batch)
+        boxes, scores = outputs
+        boxes = boxes[0]
+        scores = scores[0]
+        for idx, box in enumerate(boxes):
+            cv2.polylines(image, [box.reshape(-1, 1, 2).astype(np.int)], True,
+                          (0, 255, 0), 2)
+            cv2.putText(image, str(scores[idx])[:6], (int(box[3, 0]), int(box[3, 1])),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
         cv2.imshow('g', image)
         cv2.waitKey()
-        pdb.set_trace()
 
 
 if __name__ == '__main__':

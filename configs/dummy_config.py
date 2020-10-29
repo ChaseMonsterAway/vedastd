@@ -20,7 +20,7 @@ train_transforms = [
     dict(type='MakeShrinkMap', ratios=[0.4], max_shr=20, min_text_size=8, prefix='seg'),
     dict(type='MakeShrinkMap', ratios=[1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4], max_shr=20, min_text_size=8,
          prefix='kernel'),
-    dict(type='MakeBoarderMap', shrink_ratio=0.4, thresh_min=0.3, thresh_max=0.7),
+    dict(type='MakeBorderMap', shrink_ratio=0.4, thresh_min=0.3, thresh_max=0.7),
     dict(type='Resize', keep_ratio=True, size=(448, 448), img_mode='nearest', mask_mode='nearest'),
     # dict(type='RandomRotation', angles=(-10, 10), p=0.5),
     dict(type='Canvas', size=(448, 448), img_v=0, mask_v=0),
@@ -34,7 +34,7 @@ train_transforms = [
 
 test_transforms = [
     dict(type='MakeShrinkMap', ratios=[0.4], max_shr=20, min_text_size=8, prefix='seg'),
-    dict(type='MakeBoarderMap', shrink_ratio=0.4, thresh_min=0.3, thresh_max=0.7),
+    dict(type='MakeBorderMap', shrink_ratio=0.4, thresh_min=0.3, thresh_max=0.7),
     dict(type='Resize', keep_ratio=True, size=(448, 448), img_mode='nearest', mask_mode='nearest'),
     dict(type='Canvas', size=(448, 448), img_v=0, mask_v=0),
     dict(type='FilterKeys',

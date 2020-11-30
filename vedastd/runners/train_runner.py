@@ -92,8 +92,9 @@ class TrainRunner(InferenceRunner):
         if self.iter % self.log_interval == 0:
             with torch.no_grad():
                 boxes = self.postprocessor(batch, pred, training=True)
-            self.metric.measure(batch, boxes, training=True)
-            self.logger.info(f'{self.metric.metrics}')
+            if 'train' in self.metric.phase:
+                self.metric.measure(batch, boxes, training=True)
+                self.logger.info(f'{self.metric.metrics}')
             self.logger.info(
                 f'Train, epoch: {self.epoch}, Iter {self.iter}, LR {self.lr} loss {loss.item()}')
             for key, value in loss_infos.items():
@@ -110,7 +111,6 @@ class TrainRunner(InferenceRunner):
             self.metric.measure(batch, boxes, training=False)
 
     def __call__(self):
-        self.metric.reset()
         self.logger.info('Start train...')
 
         iter_based = self.lr_scheduler._iter_based
@@ -118,6 +118,7 @@ class TrainRunner(InferenceRunner):
 
         flag = True
         while flag:
+            self.metric.reset()
             for iters, batch in enumerate(self.train_dataloader):
                 self._train_batch(batch)
                 self.lr_scheduler.iter_nums()  # update steps

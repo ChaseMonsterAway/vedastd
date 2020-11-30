@@ -111,13 +111,14 @@ class QuadMeasurer2:
 
 @METRICS.register_module
 class QuadMeasurer:
-    def __init__(self, polygon=False):
+    def __init__(self, polygon=False, measure_phase=('train', 'val')):
         self.recalls = []
         self.precisions = []
         self.fmean = []
         self.polygon = polygon
         self.evaluator = DetectionIoUEvaluator()
         self.history = []
+        self.phase = measure_phase
 
     def reset(self):
         self.history = []

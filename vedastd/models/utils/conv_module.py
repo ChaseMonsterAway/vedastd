@@ -9,6 +9,7 @@ from .norm import build_norm_layer
 
 conv_cfg = {
     'Conv': nn.Conv2d,
+    'ConvTranspose': nn.ConvTranspose2d,
     # TODO: octave conv
 }
 
@@ -60,6 +61,7 @@ class ConvModule(nn.Module):
             sequence of "conv", "norm" and "act". Examples are
             ("conv", "norm", "act") and ("act", "conv", "norm").
     """
+
     def __init__(self,
                  in_channels,
                  out_channels,
@@ -168,6 +170,7 @@ class ConvModules(nn.Module):
 
     Args:
     """
+
     def __init__(self,
                  in_channels,
                  out_channels,

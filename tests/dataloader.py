@@ -12,6 +12,9 @@ from vedastd.dataloaders import build_dataloader
 from vedastd.dataloaders.collate_fn import build_collate_fn
 from tests.utils import tensor_to_numpy, show_polygon
 
+import albumentations as alb
+alb.Normalize
+
 if __name__ == '__main__':
     image = cv2.imread(r'D:\DATA_ALL\STD\IC5\ch4_test_images\img_1.jpg')
     polygon = [[790, 302, 903, 304, 902, 335, 790, 335],
@@ -24,24 +27,27 @@ if __name__ == '__main__':
     tags = [True, True, False, True, False, True]
     each_len = [0, 4, 4 * 2, 4 * 3, 4 * 4, 4 * 5]
     tr = [
-        dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
-        dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant',
+        dict(type='LongestMaxSize', max_size=256, interpolation='bilinear', p=1),
+        dict(type='RandomCropBasedOnBox'),
+        dict(type='PadIfNeeded', min_height=256, min_width=256, border_mode='constant',
              value=0),
         dict(type='KeypointsToPolygon'),
-        dict(type='MakeShrinkMap', ratios=[1], max_shr=0.4, min_text_size=4, p=1),
+        dict(type='MakeShrinkMap', ratios=[1], max_shr=20, min_text_size=4, p=1),
         dict(type='MaskMarker', name='gt'),
-        dict(type='MakeShrinkMap', ratios=[0.9, 0.8, 0.7], max_shr=0.4, min_text_size=4, p=1),
-        dict(type='MaskMarker', name='shrink'),
+        dict(type='MakeBorderMap', shrink_ratio=0.4),
+        dict(type='MaskMarker', name='border'),
+        dict(type='Normalize', mean=(123.675/255, 116.280/255, 103.530/255), std=(255.0/255, 255.0/255, 255.0/255), max_pixel_value=255),
         dict(type='ToTensor'),
         dict(type='Grouping'),
     ]
+
     transforms = build_transform(tr)
 
     dt = [dict(type='TxtDataset',
-               img_root=r'D:\DATA_ALL\STD\IC5\ch4_training_images',
-               gt_root=r'D:\DATA_ALL\STD\IC5\ch4_training_localization_transcription_gt',
-               txt_file=r'D:\DATA_ALL\STD\IC5\train.txt',
-               ignore_tag='###',
+               img_root=r'D:\DB-master\express-data\train_images',
+               gt_root=r'D:\DB-master\express-data\train_gts',
+               txt_file=r'D:\DB-master\express_train.txt',
+               ignore_tag='1',
                )]
 
     collate_fn = dict(type='BaseCollate', stack_keys=['image', 'gt', 'shrink'])
@@ -59,6 +65,8 @@ if __name__ == '__main__':
             polygons = batch['polygon'][idx]
             show_polygon(image, polygons, batch['tags'][idx])
             cv2.imshow('img', image)
+            cv2.imshow('mask', tensor_to_numpy(batch['gt'][idx][0, :, :]))
+            cv2.imshow('mask2', tensor_to_numpy(batch['gt'][idx][1, :, :]))
             cv2.waitKey()
         print(batch.keys())
 

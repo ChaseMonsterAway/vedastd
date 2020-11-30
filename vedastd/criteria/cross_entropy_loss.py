@@ -15,5 +15,6 @@ class CrossEntropyLoss(nn.Module):
                                             reduce=reduce,
                                             reduction=reduction)
 
-    def forward(self, pred, target, *args):
-        return self.criteron(pred.contiguous().view(-1, pred.shape[-1]), target.to(pred.device).contiguous().view(-1))
+    def _forward(self, pred, target, *args):
+        return self.criteron(pred.contiguous().view(-1, pred.shape[-1]),
+                             target.to(pred.device).contiguous().view(-1))

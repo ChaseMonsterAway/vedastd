@@ -98,6 +98,8 @@ class FusionBlock(nn.Module):
                  activation='relu',
                  inplace=True,
                  common_stride=4,
+                 multi_conv=False,
+                 bias=True,
                  ):
         super(FusionBlock, self).__init__()
 
@@ -126,10 +128,15 @@ class FusionBlock(nn.Module):
                     norm_cfg=norm_cfg,
                     activation=activation,
                     inplace=inplace,
+                    bias=bias,
                 )
                 head_ops.append(conv)
-                if int(feat_stride) != int(common_stride):
+                if multi_conv and int(feat_stride) != int(common_stride):
                     head_ops.append(build_module(upsample))
+                elif int(feat_stride) != int(common_stride):
+                    upsample['scale_factor'] = int(feat_stride / common_stride)
+                    head_ops.append(build_module(upsample))
+                    break
             self.blocks.append(nn.Sequential(*head_ops))
 
     def forward(self, feats):

@@ -1,7 +1,9 @@
+import random
 import logging
 import threading
 
 import albumentations as alb
+import albumentations.augmentations.functional as F
 import cv2
 import numpy as np
 import pyclipper
@@ -25,6 +27,121 @@ CV2_BORDER_MODE = {
 }
 
 logger = logging.getLogger('Transforms')
+
+
+@TRANSFORMS.register_module
+class RandomScale(alb.Resize):
+
+    def __init__(self, scale_range=(0.5, 2.0), step=None, interpolation='bilinear', p=1):
+        super(RandomScale, self).__init__(always_apply=True, interpolation=CV2_MODE[interpolation], height=0, width=0,
+                                          p=p)
+        self.scale_range = scale_range
+        self.step = step
+
+    @property
+    def targets_as_params(self):
+        return ['image']
+
+    def apply(self, img, interpolation=cv2.INTER_LINEAR, **params):
+        return F.resize(img, height=params['height'], width=params['width'],
+                        interpolation=interpolation)
+
+    def apply_to_keypoint(self, keypoint, **params):
+        height = params["rows"]
+        width = params["cols"]
+        scale_x = params['width'] / width
+        scale_y = params['height'] / height
+        return F.keypoint_scale(keypoint, scale_x, scale_y)
+
+    def _get_scale(self):
+        if self.step is not None:
+            scales = np.linspace(self.scale_range[0], self.scale_range[1],
+                                 int(self.scale_range[1] - self.scale_range[0]) / self.step).tolist()
+            return random.choice(scales)
+        else:
+            return random.uniform(*self.scale_range)
+
+    def get_params_dependent_on_targets(self, params):
+        h, w = params['image'].shape[:2]
+        scale = self._get_scale()
+        new_height = int(h * scale)
+        new_width = int(w * scale)
+        return {'height': new_height, 'width': new_width}
+
+
+# @TRANSFORMS.register_module
+# class FactorScale(alb.DualTransform):
+#     def __init__(self, scale=1.0, interpolation='bilinear',
+#                  always_apply=False,
+#                  p=1.0):
+#         super(FactorScale, self).__init__(always_apply, p)
+#         self.scale = scale
+#         self.interpolation = CV2_MODE[interpolation]
+#
+#     def apply(self, image, scale=1.0, **params):
+#         return F.scale(image, scale, interpolation=self.interpolation)
+#
+#     def apply_to_mask(self, image, scale=1.0, **params):
+#         return F.scale(image, scale, interpolation=cv2.INTER_NEAREST)
+#
+#     def get_params(self):
+#         return {'scale': self.scale}
+#
+#     def get_transform_init_args_names(self):
+#         return ('scale',)
+#
+#
+# @TRANSFORMS.register_module
+# class LongestMaxSize(FactorScale):
+#     def __init__(self, h_max, w_max, interpolation='bilinear',
+#                  always_apply=False, p=1.0):
+#         self.h_max = h_max
+#         self.w_max = w_max
+#         super(LongestMaxSize, self).__init__(interpolation=interpolation,
+#                                              always_apply=always_apply,
+#                                              p=p)
+#
+#     def update_params(self, params, **kwargs):
+#         params = super(LongestMaxSize, self).update_params(params, **kwargs)
+#         rows = params['rows']
+#         cols = params['cols']
+#
+#         scale_h = self.h_max / rows
+#         scale_w = self.w_max / cols
+#         scale = min(scale_h, scale_w)
+#
+#         params.update({'scale': scale})
+#         return params
+#
+#     def get_transform_init_args_names(self):
+#         return ('h_max', 'w_max',)
+#
+#
+# @TRANSFORMS.register_module
+# class RandomScale(FactorScale):
+#     def __init__(self, scale_limit=(0.5, 2), interpolation='bilinear',
+#                  scale_step=None, always_apply=False, p=1.0):
+#         super(RandomScale, self).__init__(interpolation=interpolation,
+#                                           always_apply=always_apply,
+#                                           p=p)
+#         self.scale_limit = alb.to_tuple(scale_limit)
+#         self.scale_step = scale_step
+#
+#     def get_params(self):
+#         if self.scale_step:
+#             num_steps = int((self.scale_limit[1] - self.scale_limit[
+#                 0]) / self.scale_step + 1)
+#             scale_factors = np.linspace(self.scale_limit[0],
+#                                         self.scale_limit[1], num_steps)
+#             scale_factor = np.random.choice(scale_factors).item()
+#         else:
+#             scale_factor = random.uniform(self.scale_limit[0],
+#                                           self.scale_limit[1])
+#
+#         return {'scale': scale_factor}
+#
+#     def get_transform_init_args_names(self):
+#         return ('scale_limit', 'scale_step',)
 
 
 @TRANSFORMS.register_module
@@ -131,7 +248,7 @@ class MakeShrinkMap(alb.NoOp):
             kwargs['masks'] = kwargs['masks'] + shrink_maps + mask_maps
         else:
             kwargs['masks'] = shrink_maps + mask_maps
-
+        kwargs['tags'] = tags
         return kwargs
 
 
@@ -139,24 +256,37 @@ class MakeShrinkMap(alb.NoOp):
 class RandomCropBasedOnBox(alb.RandomCropNearBBox):
     """Random crop the image based on the bounding boxes."""
 
-    def __init__(self, always_apply=False, p=1.0):
-        self.max_tries = 50
-        self.min_crop_side_ratio = 0.2
+    def __init__(self, always_apply=False, p=1.0, max_tries=50, min_crop_side_ratio=0.1):
+        self.max_tries = max_tries
+        self.min_crop_side_ratio = min_crop_side_ratio
 
-        super(RandomCropBasedOnBox, self).__init__(always_apply=always_apply, p=p)
+        super(RandomCropBasedOnBox, self).__init__(always_apply=always_apply, p=1)
         self._crop_area = []
+        self.p = p
 
     def __call__(self, force_apply=False, **kwargs):
-        kwargs = super(RandomCropBasedOnBox, self).__call__(force_apply, **kwargs)
+        if random.random() > self.p:
+            return kwargs
+        init_image = kwargs['image'].copy()
+        # # print(kwargs['keypoints'])
+        kwargs = super(RandomCropBasedOnBox, self).__call__(force_apply=True, **kwargs)
+        # # print(self._crop_area)
         keypoints = kwargs['keypoints']
+        # print(keypoints)
         each_len = kwargs['each_len']
         poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
                 for i in range(1, len(each_len))]
         tags = kwargs['tags']
+        # print('before, ', tags)
         for idx, p in enumerate(poly):
             if tags[idx]:
-                if self.is_poly_outside_rect(p, *self._crop_area):
+                # # print(p, '\n', self._crop_area)
+                if self.is_poly_outside_rect(p, 0, 0, self._crop_area[-2], self._crop_area[-1]):
                     kwargs['tags'][idx] = False
+                # else:
+                #     pass
+                # print(self._crop_area)
+                # print(p)
         return kwargs
 
     @property
@@ -192,11 +322,15 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
     @staticmethod
     def is_poly_outside_rect(poly, x, y, w, h):
         poly = np.array(poly)
-        if poly[:, 0].max() < x or poly[:, 0].min() > x + w:
-            return True
-        if poly[:, 1].max() < y or poly[:, 1].min() > y + h:
-            return True
-        return False
+        if poly[:, 0].max() <= x + w and poly[:, 0].min() > x \
+                and poly[:, 1].max() <= y + h and poly[:, 1].min() >= y:
+            return False
+        return True
+        # if poly[:, 0].max() < x or poly[:, 0].min() > x + w:
+        #     return True
+        # if poly[:, 1].max() < y or poly[:, 1].min() > y + h:
+        #     return True
+        # return False
 
     @staticmethod
     def split_regions(axis):
@@ -278,6 +412,128 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
 
 
 @TRANSFORMS.register_module
+class RandomCropBasedOnBox2(alb.RandomCropNearBBox):
+    """Random crop the image based on the bounding boxes."""
+
+    def __init__(self, always_apply=False, p=1.0, max_tries=50, min_crop_side_ratio=0.1, crop_size=(640, 640)):
+        self.max_tries = max_tries
+        self.min_crop_side_ratio = min_crop_side_ratio
+
+        super(RandomCropBasedOnBox2, self).__init__(always_apply=always_apply, p=1)
+        self._crop_area = []
+        self.p = p
+        self.crop_size = crop_size
+
+    def __call__(self, force_apply=False, **kwargs):
+        if random.random() > self.p:
+            return kwargs
+        init_image = kwargs['image'].copy()
+        # # print(kwargs['keypoints'])
+        kwargs = super(RandomCropBasedOnBox2, self).__call__(force_apply=True, **kwargs)
+        # # print(self._crop_area)
+        keypoints = kwargs['keypoints']
+        # print(keypoints)
+        each_len = kwargs['each_len']
+        poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
+                for i in range(1, len(each_len))]
+        tags = kwargs['tags']
+        # print('before, ', tags)
+        for idx, p in enumerate(poly):
+            if tags[idx]:
+                if self.is_poly_outside_rect(p, 0, 0, self._crop_area[-2], self._crop_area[-1]):
+                    kwargs['tags'][idx] = False
+        return kwargs
+
+    @property
+    def targets_as_params(self):
+        return ['image', 'keypoints', 'tags', 'each_len']
+
+    def get_params_dependent_on_targets(self, params):
+        img = params['image']
+        keypoints = params['keypoints']
+        each_len = params['each_len']
+        poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
+                for i in range(1, len(each_len))]
+        tags = params['tags']
+        all_care_polys = []
+        for idx, line in enumerate(poly):
+            if tags[idx]:
+                all_care_polys.append(line)
+
+        crop_x, crop_y, crop_w, crop_h = self.crop_area(img, all_care_polys)
+        self._crop_area = [crop_x, crop_y, crop_w, crop_h]
+
+        return {"x_min": crop_x, "x_max": crop_x + crop_w, "y_min": crop_y, "y_max": crop_y + crop_h}
+
+    @staticmethod
+    def is_poly_in_rect(poly, x, y, w, h):
+        poly = np.array(poly)
+        if poly[:, 0].min() < x or poly[:, 0].max() > x + w:
+            return False
+        if poly[:, 1].min() < y or poly[:, 1].max() > y + h:
+            return False
+        return True
+
+    @staticmethod
+    def is_poly_outside_rect(poly, x, y, w, h):
+        poly = np.array(poly)
+        if poly[:, 0].max() <= x + w and poly[:, 0].min() > x \
+                and poly[:, 1].max() <= y + h and poly[:, 1].min() >= y:
+            return False
+        return True
+
+    @staticmethod
+    def split_regions(axis):
+        regions = []
+        min_axis = 0
+        for i in range(1, axis.shape[0]):
+            if axis[i] != axis[i - 1] + 1:
+                region = axis[min_axis:i]
+                min_axis = i
+                regions.append(region)
+        return regions
+
+    @staticmethod
+    def random_select(axis, max_size):
+        xx = np.random.choice(axis, size=2)
+        xmin = np.min(xx)
+        xmax = np.max(xx)
+        xmin = np.clip(xmin, 0, max_size - 1)
+        xmax = np.clip(xmax, 0, max_size - 1)
+        return xmin, xmax
+
+    @staticmethod
+    def region_wise_random_select(regions, max_size):
+        selected_index = list(np.random.choice(len(regions), 2))
+        selected_values = []
+        for index in selected_index:
+            axis = regions[index]
+            xx = int(np.random.choice(axis, size=1))
+            selected_values.append(xx)
+        xmin = min(selected_values)
+        xmax = max(selected_values)
+        return xmin, xmax
+
+    def crop_area(self, img, polys):
+        h, w = img.shape[:2]
+        crop_w = min(w, self.crop_size[0])
+        crop_h = min(h, self.crop_size[1])
+        for i in range(self.max_tries):
+            xmin = random.randint(0, w - crop_w)
+            ymin = random.randint(0, h - crop_h)
+
+            num_poly_in_rect = 0
+            for poly in polys:
+                if not self.is_poly_outside_rect(poly, xmin, ymin, crop_w, crop_h):
+                    num_poly_in_rect += 1
+                    break
+            if num_poly_in_rect > 0:
+                return xmin, ymin, crop_w, crop_h
+
+        return 0, 0, w, h
+
+
+@TRANSFORMS.register_module
 class ToTensor(alb.DualTransform):
     """Transfer data from numpy.ndarray to torch.Tensor."""
 
@@ -301,7 +557,7 @@ class ToTensor(alb.DualTransform):
         return keypoints
 
     def __call__(self, force_apply=False, **kwargs):
-        kwargs = super(ToTensor, self).__call__(force_apply, **kwargs)
+        kwargs = super(ToTensor, self).__call__(force_apply=force_apply, **kwargs)
         if MaskMarker.get_names():
             for name in MaskMarker.get_names():
                 if name in kwargs:
@@ -351,9 +607,10 @@ class Grouping(alb.NoOp):
 
 
 @TRANSFORMS.register_module
-class PadIfNeeded(alb.PadIfNeeded):
+class PadorResize(alb.PadIfNeeded):
     def __init__(self, min_height=1024,
                  min_width=1024,
+                 interpolation='bilinear',
                  border_mode=cv2.BORDER_REFLECT_101,
                  value=None,
                  mask_value=None,
@@ -361,7 +618,11 @@ class PadIfNeeded(alb.PadIfNeeded):
                  p=1.0, ):
         border_mode = CV2_BORDER_MODE[border_mode]
 
-        super(PadIfNeeded, self).__init__(min_height=min_height,
+        self.resize = alb.LongestMaxSize(max_size=max(min_width, min_height),
+                                         interpolation=CV2_MODE[interpolation],
+                                         always_apply=True)
+
+        super(PadorResize, self).__init__(min_height=min_height,
                                           min_width=min_width,
                                           border_mode=border_mode,
                                           value=value,
@@ -371,7 +632,7 @@ class PadIfNeeded(alb.PadIfNeeded):
                                           )
 
     def update_params(self, params, **kwargs):
-        params = super(PadIfNeeded, self).update_params(params, **kwargs)
+        params = super(PadorResize, self).update_params(params, **kwargs)
         rows = params["rows"]
         cols = params["cols"]
 
@@ -396,7 +657,10 @@ class PadIfNeeded(alb.PadIfNeeded):
 
     def __call__(self, force_apply=False, **kwargs):
         h, w = kwargs['image'].shape[:2]
-        kwargs = super().__call__(force_apply, **kwargs)
+        if h > self.min_height or w > self.min_width:
+            kwargs = self.resize(force_apply=False, **kwargs)
+            h, w = kwargs['image'].shape[:2]
+        kwargs = super().__call__(force_apply=force_apply, **kwargs)
         kwargs['resized_shape'] = np.array([h, w])
         if 'polygon' in kwargs:
             poly = kwargs['polygon']
@@ -455,7 +719,7 @@ class MakeBorderMap(alb.NoOp):
                 self.draw_border_map(polygons[i], canvas[:, :, 0],
                                      mask=mask[:, :, 0])
             except:
-                assert np.any(polygons[i][:, 1] <= 0) or np.any(polygons[i][:, 0] <= 0)
+                # assert np.any(polygons[i][:, 1] <= 0) or np.any(polygons[i][:, 0] <= 0)
                 tags[i] = False
                 continue
         canvas = canvas * (
@@ -464,6 +728,7 @@ class MakeBorderMap(alb.NoOp):
             kwargs['masks'] = kwargs['masks'] + [canvas, mask]
         else:
             kwargs['masks'] = [canvas, mask]
+        kwargs['tags'] = tags
 
         return kwargs
 

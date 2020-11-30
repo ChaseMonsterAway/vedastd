@@ -4,7 +4,7 @@ norm_cfg = dict(type='BN')
 
 # 9. device
 deploy = dict(
-    gpu_id='4',
+    gpu_id='5',
     transforms=[
         dict(type='LongestMaxSize', max_size=256, interpolation='bilinear', p=1),
         dict(type='PadIfNeeded', min_height=256, min_width=256, border_mode='constant',
@@ -16,8 +16,8 @@ deploy = dict(
     postprocessor=dict(
         type='Postprocessor',
         min_size=4,
-        thresh=0.3,
-        box_thresh=0.5,
+        thresh=0.5,
+        box_thresh=0.6,
         name='binary_map',
         unclip_ratio=1.5,
     ),
@@ -139,7 +139,7 @@ deploy = dict(
         ),
         head=dict(
             type='DBHead',
-            k=50,
+            k=10,
             fuse_binary=False,
             adaptive=True,
             thresh=dict(
@@ -147,12 +147,14 @@ deploy = dict(
                 layers=[
                     dict(type='ConvModule', in_channels=256, out_channels=64, kernel_size=3,
                          stride=1, padding=1, bias=False, norm_cfg=norm_cfg),
-                    dict(type='ConvModule', conv_cfg=dict(type='ConvTranspose'),
-                         in_channels=64, out_channels=64, kernel_size=2,
-                         stride=2, norm_cfg=norm_cfg),
-                    dict(type='ConvModule', conv_cfg=dict(type='ConvTranspose'),
-                         in_channels=64, out_channels=1, kernel_size=2,
-                         stride=2, norm_cfg=None, activation='sigmoid'),
+                    dict(type='Upsample', scale_factor=2, mode='nearest'),
+                    dict(type='ConvModule', in_channels=64, out_channels=64, kernel_size=3,
+                         stride=1, padding=1, bias=False, norm_cfg=norm_cfg),
+                    dict(type='Upsample', scale_factor=2, mode='nearest'),
+                    dict(type='ConvModule', in_channels=64, out_channels=64, kernel_size=3,
+                         stride=1, padding=1, bias=False, norm_cfg=None, activation=None),
+                    dict(type='ConvModule', in_channels=64, out_channels=1, kernel_size=1,
+                         stride=1, padding=0, bias=True, norm_cfg=None, activation='sigmoid'),
                 ],
             ),
             binary=dict(
@@ -160,12 +162,14 @@ deploy = dict(
                 layers=[
                     dict(type='ConvModule', in_channels=256, out_channels=64, kernel_size=3,
                          stride=1, padding=1, bias=False, norm_cfg=norm_cfg),
-                    dict(type='ConvModule', conv_cfg=dict(type='ConvTranspose'),
-                         in_channels=64, out_channels=64, kernel_size=2,
-                         stride=2, norm_cfg=norm_cfg),
-                    dict(type='ConvModule', conv_cfg=dict(type='ConvTranspose'),
-                         in_channels=64, out_channels=1, kernel_size=2,
-                         stride=2, norm_cfg=None, activation='sigmoid'),
+                    dict(type='Upsample', scale_factor=2, mode='nearest'),
+                    dict(type='ConvModule', in_channels=64, out_channels=64, kernel_size=3,
+                         stride=1, padding=1, bias=False, norm_cfg=norm_cfg),
+                    dict(type='Upsample', scale_factor=2, mode='nearest'),
+                    # dict(type='ConvModule', in_channels=64, out_channels=64, kernel_size=3,
+                    #      stride=1, padding=1, bias=False, norm_cfg=None, activation=None),
+                    dict(type='ConvModule', in_channels=64, out_channels=1, kernel_size=3,
+                         stride=1, padding=1, bias=False, norm_cfg=None, activation='sigmoid'),
                 ],
             ),
             out_name='thresh_binary_map',
@@ -194,36 +198,36 @@ common = dict(
 test = dict(
     data=dict(
         dataset=[dict(type=dataset_type,
-                      img_root=dataset_root,
-                      gt_root=dataset_root,
-                      txt_file=dataset_root + '/ic15_test.txt',
+                      img_root=dataset_root + '/express/images',
+                      gt_root=dataset_root + '/express/train_gts',
+                      txt_file=dataset_root + r'/express_train.txt',
                       ignore_tag='1',
                       )],
         transforms=deploy['transforms'],
         collate_fn=dict(type='BaseCollate', stack_keys=['image']),
         dataloader=dict(type='BaseDataloader',
-                        batch_size=8,
+                        batch_size=2,
                         num_workers=4,
                         )
     )
 )
 ## 2.2 configuration for train
-batch_size = 24
-max_epoch = 100
-# max_iterations = 1200
+batch_size = 20
+max_epoch = 1200
+max_iterations = 1200
 train = dict(
     data=dict(
         train=dict(
             dataset=[dict(type=dataset_type,
-                          img_root=dataset_root,
-                          gt_root=dataset_root,
-                          txt_file=dataset_root + r'/ic15_train.txt',
+                          img_root=dataset_root + '/express/images',
+                          gt_root=dataset_root + '/express/train_gts',
+                          txt_file=dataset_root + r'/express_train.txt',
                           ignore_tag='1',
                           )],
             transforms=[
                 dict(type='LongestMaxSize', max_size=256, interpolation='bilinear', p=1),
                 # dict(type='PadIfNeeded', min_height=256, min_width=256, border_mode='constant', value=0),
-                dict(type='RandomCropBasedOnBox', p=0.5),
+                dict(type='RandomCropBasedOnBox'),
                 dict(type='PadIfNeeded', min_height=256, min_width=256, border_mode='constant', value=0),
                 dict(type='KeypointsToPolygon'),
                 dict(type='MakeShrinkMap', ratios=[0.4], max_shr=20, min_text_size=4, p=1),
@@ -240,14 +244,14 @@ train = dict(
         ),
         val=dict(
             dataset=[dict(type=dataset_type,
-                          img_root=dataset_root,
-                          gt_root=dataset_root,
-                          txt_file=dataset_root + r'/ic15_test.txt',
+                          img_root=dataset_root + '/express/images',
+                          gt_root=dataset_root + '/express/train_gts',
+                          txt_file=dataset_root + r'/express_train.txt',
                           ignore_tag='1',
                           )],
             transforms=deploy['transforms'],
             collate_fn=dict(type='BaseCollate', stack_keys=['image']),
-            dataloader=dict(type='BaseDataloader', batch_size=batch_size, num_workers=1),
+            dataloader=dict(type='BaseDataloader', batch_size=batch_size, num_workers=1)
         ),
     ),
     criterion=[
@@ -266,12 +270,12 @@ train = dict(
     ),
     lr_scheduler=dict(
         type='PolyLR',
-        iter_based=False,
+        iter_based=False
         # milestones=[2000],
-        warmup_epochs=2,
+        # warmup_epochs=2,
     ),
     postprocess=dict(type='Postprocessor',
-                     thresh=0.3,
+                     thresh=0.5,
                      box_thresh=0.5,
                      name='binary_map',
                      min_size=8,

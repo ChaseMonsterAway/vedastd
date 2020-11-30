@@ -22,3 +22,16 @@ class BaseDataset(Dataset):
 
     def __len__(self):
         return len(self.item_lists)
+
+    # @abstractmethod
+    # def get_poly(self, item):
+    #     pass
+    #
+    # @abstractmethod
+    # def get_img(self, item):
+    #     pass
+    #
+    # def __getitem__(self, item):
+    #     poly = self.get_poly(item)
+    #     img = self.get_img(item)
+    #

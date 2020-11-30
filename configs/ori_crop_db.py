@@ -4,13 +4,13 @@ norm_cfg = dict(type='BN')
 
 # 9. device
 deploy = dict(
-    gpu_id='4',
+    gpu_id='7',
     transforms=[
-        dict(type='LongestMaxSize', max_size=256, interpolation='bilinear', p=1),
-        dict(type='PadIfNeeded', min_height=256, min_width=256, border_mode='constant',
+        dict(type='LongestMaxSize', max_size=1280, interpolation='bilinear', p=1),
+        dict(type='PadorResize', min_height=1280, min_width=1280, border_mode='constant',
              value=0),
         dict(type='Normalize', mean=(0.485, 0.456, 0.406),
-             std=(1.0, 1.0, 1.0), max_pixel_value=255),
+             std=(0.229, 0.224, 0.225), max_pixel_value=255),
         dict(type='ToTensor'),
     ],
     postprocessor=dict(
@@ -191,6 +191,19 @@ common = dict(
 )
 
 ## 2.1 configuration for test
+test_postprocessors=[dict(
+        type='Postprocessor',
+        min_size=3,
+        thresh=thresh / 100.0,
+        box_thresh=box_thresh / 100.0,
+        name='binary_map',
+        unclip_ratio=1.5,
+        ) 
+        for thresh in list(range(30, 70, 5))
+        for box_thresh in list(range(thresh,75, 5))
+        # for unclip_ratio in list(range(13, 17, 1))
+        # for min_size in list(range(3,4,1))
+  ]
 test = dict(
     data=dict(
         dataset=[dict(type=dataset_type,
@@ -202,14 +215,17 @@ test = dict(
         transforms=deploy['transforms'],
         collate_fn=dict(type='BaseCollate', stack_keys=['image']),
         dataloader=dict(type='BaseDataloader',
-                        batch_size=8,
+                        batch_size=1,
                         num_workers=4,
                         )
-    )
+    ),
+    postprocessor=dict(type='SearchPostprocessor',
+                       post_processors=test_postprocessors,
+                      )
 )
 ## 2.2 configuration for train
-batch_size = 24
-max_epoch = 100
+batch_size = 16
+max_epoch = 1200
 # max_iterations = 1200
 train = dict(
     data=dict(
@@ -221,17 +237,20 @@ train = dict(
                           ignore_tag='1',
                           )],
             transforms=[
-                dict(type='LongestMaxSize', max_size=256, interpolation='bilinear', p=1),
+                dict(type='RandomScale', scale_range=(0.5, 3.0), interpolation='bilinear', p=1),
+                dict(type='IAAFliplr', p=0.5),
+                dict(type='Rotate', limit=10, border_mode='constant', value=0),
+                # dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
                 # dict(type='PadIfNeeded', min_height=256, min_width=256, border_mode='constant', value=0),
-                dict(type='RandomCropBasedOnBox', p=0.5),
-                dict(type='PadIfNeeded', min_height=256, min_width=256, border_mode='constant', value=0),
+                dict(type='RandomCropBasedOnBox', p=1.0),
+                dict(type='PadorResize', min_height=640, min_width=640, border_mode='constant', value=0),
                 dict(type='KeypointsToPolygon'),
-                dict(type='MakeShrinkMap', ratios=[0.4], max_shr=20, min_text_size=4, p=1),
+                dict(type='MakeShrinkMap', ratios=[0.4], max_shr=20, min_text_size=8, p=1),
                 dict(type='MaskMarker', name='gt'),
                 dict(type='MakeBorderMap', shrink_ratio=0.4),
                 dict(type='MaskMarker', name='border'),
                 dict(type='Normalize', mean=(0.485, 0.456, 0.406),
-                     std=(1.0, 1.0, 1.0), max_pixel_value=255),
+                     std=(0.229, 0.224, 0.225), max_pixel_value=255),
                 dict(type='Grouping', channel_first=False),
                 dict(type='ToTensor'),
             ],

@@ -13,7 +13,7 @@ class BalanceCrossEntropyLoss(BaseLoss):
         self.negative_ratio = negative_ratio
         self.eps = eps
 
-    def forward(self,
+    def _forward(self,
                 pred: dict,
                 target: dict):
         pred, target, mask = self.extract_pairs(pred, target)
@@ -25,7 +25,7 @@ class BalanceCrossEntropyLoss(BaseLoss):
         negative_count = min(int(negative.float().sum()),
                              int(positive_count * self.negative_ratio))
         loss = nn.functional.binary_cross_entropy(
-            pred, target.to(pred.device), reduction='none')[:, 0, :, :]
+            pred, target.to(pred.device), reduction='none')#[:, 0, :, :]
         positive_loss = loss * positive.float()
         negative_loss = loss * negative.float()
         if negative_loss.view(-1).shape[0] < negative_count:
@@ -36,3 +36,28 @@ class BalanceCrossEntropyLoss(BaseLoss):
                        (positive_count + negative_count + self.eps)
 
         return balance_loss
+
+
+if __name__ == '__main__':
+    import random
+    import numpy as np
+
+
+    def seed(n):
+        random.seed(n)
+        np.random.seed(n)
+        torch.manual_seed(n)
+        torch.cuda.manual_seed(n)
+
+
+    seed(1)
+    pred = torch.randn(size=(2, 1, 512, 512)).sigmoid()
+    gt = torch.randn(size=(2, 1, 512, 512)).sigmoid().round()
+    mask = torch.randn(size=(2, 512, 512)).sigmoid().round()
+    mask = mask.unsqueeze(1)
+    l1_loss = BalanceCrossEntropyLoss(pred_map='1',
+                                      target='1',
+                                      loss_weight=1.0,
+                                      loss_name='2')
+    loss = l1_loss({'1': pred}, {'1': torch.cat((gt, mask), 1)})
+    print(loss)

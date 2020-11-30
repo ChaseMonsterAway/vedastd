@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
+import logging
+
 import torch
 import torch.nn as nn
 
 from .registry import HEADS
 from ..utils import build_module
+from ..weight_init import init_weights
 
 
 @HEADS.register_module
@@ -13,6 +16,7 @@ class DBHead(nn.Module):
     def __init__(self, k, binary, thresh, out_name=None,
                  adaptive=True, fuse_binary=False):
         super(DBHead, self).__init__()
+        self.logger = logging.getLogger()
         self.adaptive = adaptive
         self.fuse_binary = fuse_binary
         self.binarize_name = binary['name']
@@ -23,7 +27,7 @@ class DBHead(nn.Module):
         self.binarize = nn.Sequential(*binary_layers)
 
         if thresh:
-            assert out_name is not None and isinstance(out_name, str),\
+            assert out_name is not None and isinstance(out_name, str), \
                 'You should specify the name of final output'
             self.thresh_name = thresh.pop('name')
             self.out_name = out_name
@@ -33,6 +37,8 @@ class DBHead(nn.Module):
             self.thresh = nn.Sequential(*thresh_layers)
 
         self.k = k
+        self.logger.info('DBHead init weights.')
+        init_weights(self.modules())
 
     @property
     def with_thresh_layer(self):

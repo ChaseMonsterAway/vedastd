@@ -32,7 +32,6 @@ class DiceLoss(BaseLoss):
             assert weights.shape == mask.shape
             mask = weights * mask
 
-        pred = torch.sigmoid(pred)
         intersection = (pred * gt * mask).sum()
         union = (pred * mask).sum() + (gt * mask).sum() + self.eps
         loss = 1 - 2.0 * intersection / union
@@ -40,14 +39,14 @@ class DiceLoss(BaseLoss):
 
         return loss
 
-    def forward(self, pred, target):  # only pred is in CUDA
+    def _forward(self, pred, target):  # only pred is in CUDA
         pmap, tmap, tmask = self.extract_pairs(pred, target)
         if self.ohem:
             tmask = ohem_batch(pmap, tmap, tmask)
         tmap, tmask = tmap.to(pmap.device), tmask.to(pmap.device)
         loss = self._compute(pmap, tmap, tmask)
 
-        return loss * self.loss_weight
+        return loss
 
 
 @CRITERIA.register_module
@@ -96,7 +95,7 @@ class MultiDiceLoss(BaseLoss):
             loss_kernels.append(loss)
         return sum(loss_kernels) / len(loss_kernels)
 
-    def forward(self, pred, target):
+    def _forward(self, pred, target):
         # score_map shape b*1*w*h
         score_map = pred[self.score_map]
         # pmap,tmap.shape == B*6*wh, tmask shape == b*1*wh
@@ -105,4 +104,30 @@ class MultiDiceLoss(BaseLoss):
         tmap, selected_masks = tmap.to(pmap.device), selected_masks.to(pmap.device)
         loss = self._compute(pmap, tmap, selected_masks)
 
-        return loss * self.loss_weight
+        return loss
+
+
+if __name__ == '__main__':
+    import random
+    import numpy as np
+
+
+    def seed(n):
+        random.seed(n)
+        np.random.seed(n)
+        torch.manual_seed(n)
+        torch.cuda.manual_seed(n)
+
+
+    seed(0)
+    pred = torch.randn(size=(1, 1, 512, 512)).sigmoid()
+    gt = torch.randn(size=(1, 1, 512, 512)).sigmoid().round()
+    mask = torch.randn(size=(1, 512, 512)).sigmoid().round()
+    mask = mask.unsqueeze(0)
+    l1_loss = DiceLoss(pred_map='1',
+                       target='1',
+                       loss_weight=1.0,
+                       loss_name='2',
+                       eps=1e-6)
+    loss = l1_loss({'1': pred}, {'1': torch.cat((gt, mask), 1)})
+    print(loss)

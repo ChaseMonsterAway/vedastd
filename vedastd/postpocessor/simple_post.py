@@ -41,7 +41,7 @@ class Postprocessor:
             if training:
                 height, width = resized_h, resized_w
                 wscale, hscale = 1, 1
-
+            # refer to threshold
             boxes, scores = self.boxes_from_bitmap(
                 _pred[self.dest][batch_index],
                 segmentation[batch_index], wscale, hscale, height, width)
@@ -64,7 +64,7 @@ class Postprocessor:
         height, width = bitmap.shape
         boxes = []
         scores = []
-        _, contours, _ = cv2.findContours(
+        contours, _ = cv2.findContours(
             (bitmap * 255).astype(np.uint8),
             cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 

@@ -128,7 +128,7 @@ class QuadMeasurer:
         batch: a dict produced by dataloaders.
             image: tensor of shape (N, C, H, W).
             polygons: tensor of shape (N, K, 4, 2), the polygons of objective regions.
-            ignore_tags: tensor of shape (N, K), indicates whether a region is ignorable or not.
+            tags: tensor of shape (N, K), indicates whether a region is ignorable or not.
             shape: the original shape of images.
             filename: the original filenames of images.
         output: (polygons, ...)

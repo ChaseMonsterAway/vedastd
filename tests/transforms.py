@@ -8,9 +8,9 @@ import torch
 import numpy as np
 
 from vedastd.transforms import build_transform
+import albumentations as alb
 
-
-is_show = False
+is_show = True
 
 
 def imshow(name, img):
@@ -23,6 +23,7 @@ def imshow(name, img):
 
 def test_cfg(cfg, imgs: dict = None):
     image = cv2.imread(r'D:\DATA_ALL\STD\IC5\ch4_training_images\img_1.jpg')
+    print(image.shape)
     imshow('input_image', image)
     polygon = [[377, 117, 463, 117, 465, 130, 378, 130],
                [493, 115, 519, 115, 519, 131, 493, 131],
@@ -129,7 +130,9 @@ def test_maskmarker_grouping():
 
 def test_random_crop():
     cfg = [
-        dict(type='RandomCropBasedOnBox', p=1),
+        # dict(type='RandomCropBasedOnBox', p=1, min_crop_side_ratio=0.001),
+        dict(type='Rotate', limit=10, border_mode='constant', value=0),
+        dict(type='IAAFliplr', p=0.5),
         dict(type='KeypointsToPolygon'),
     ]
     tr_out = test_cfg(cfg)
@@ -146,11 +149,13 @@ def test_keypoints_to_polygon():
 
 def test_resize_pad():
     cfg = [
-        dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
-        dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant', value=0),
+        dict(type='RandomScale', scale_range=(0.5, 2.0), interpolation='bilinear', p=1),
+        # dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
+        dict(type='PadorResize', min_height=640, min_width=640, border_mode='constant', value=0),
         dict(type='KeypointsToPolygon'),
     ]
     tr_out = test_cfg(cfg)
+    print(tr_out['image'].shape)
     show_trans_results(tr_out)
 
 
@@ -162,7 +167,7 @@ def test_make_map_other_transform():
     cfg = [
         dict(type='KeypointsToPolygon'),
         dict(type='MakeShrinkMap', ratios=[1.0],
-             max_shr=20, min_text_size=8, p=1),
+             max_shr=0.6, min_text_size=8, p=1),
         dict(type='MaskMarker', name='gt'),
         dict(type='MakeBorderMap', shrink_ratio=0.8),
         dict(type='MaskMarker', name='border'),
@@ -181,12 +186,16 @@ def test_other_transform_make_map():
     """Recommend transform order."""
 
     cfg = [
-        dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
+        # dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
+        dict(type='RandomScale', scale_range=(0.5, 3.0)),
+        dict(type='Rotate', limit=10, border_mode='constant', value=0),
+        dict(type='IAAFliplr', p=0.5),
         # dict(type='Rotate', interpolation='bilinear', border_mode='constant', value=0, p=1),
-        dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant',
-             value=0),
+        dict(type='RandomCropBasedOnBox'),
+        # dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant',
+        #      value=0),
         dict(type='KeypointsToPolygon'),
-        dict(type='MakeShrinkMap', ratios=[1.0],
+        dict(type='MakeShrinkMap', ratios=[0.6],
              max_shr=20, min_text_size=8, p=1),
         dict(type='MaskMarker', name='gt'),
         dict(type='MakeBorderMap', shrink_ratio=0.4),

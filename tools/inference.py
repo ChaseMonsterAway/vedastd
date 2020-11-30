@@ -1,6 +1,5 @@
 import argparse
 import os
-import pdb
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
@@ -17,6 +16,8 @@ def parse_args():
     parser.add_argument('config', type=str, help='Config file path')
     parser.add_argument('checkpoint', type=str, help='Checkpoint file path')
     parser.add_argument('image', type=str, help='input image path')
+    parser.add_argument('--score', action='store_true', default=False,
+                        help='Show score or not.')
     args = parser.parse_args()
 
     return args
@@ -51,10 +52,13 @@ def main():
         for idx, box in enumerate(boxes):
             cv2.polylines(image, [box.reshape(-1, 1, 2).astype(np.int)], True,
                           (0, 255, 0), 2)
-            cv2.putText(image, str(scores[idx])[:6], (int(box[3, 0]), int(box[3, 1])),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+            if args.score:
+                cv2.putText(image, str(scores[idx])[:6], (int(box[3, 0]), int(box[3, 1])),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
         cv2.imshow('g', image)
-        cv2.waitKey()
+        key = cv2.waitKey()
+        if key == ord('q'):
+            break
 
 
 if __name__ == '__main__':

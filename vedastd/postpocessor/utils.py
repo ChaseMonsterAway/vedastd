@@ -1,5 +1,5 @@
-import numpy as np
 import cv2
+import numpy as np
 import queue
 
 
@@ -7,7 +7,8 @@ def pse(kernals, min_area):
     kernal_num = len(kernals)
     pred = np.zeros(kernals[0].shape, dtype='int32')
 
-    label_num, label = cv2.connectedComponents(kernals[kernal_num - 1], connectivity=4)
+    label_num, label = cv2.connectedComponents(
+        kernals[kernal_num - 1], connectivity=4)
 
     for label_idx in range(1, label_num):
         if np.sum(label == label_idx) < min_area:
@@ -34,7 +35,8 @@ def pse(kernals, min_area):
             for j in range(4):
                 tmpx = x + dx[j]
                 tmpy = y + dy[j]
-                if tmpx < 0 or tmpx >= kernal.shape[0] or tmpy < 0 or tmpy >= kernal.shape[1]:
+                if tmpx < 0 or tmpx >= kernal.shape[
+                        0] or tmpy < 0 or tmpy >= kernal.shape[1]:
                     continue
                 if kernal[tmpx, tmpy] == 0 or pred[tmpx, tmpy] > 0:
                     continue

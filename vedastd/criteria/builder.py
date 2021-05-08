@@ -1,5 +1,4 @@
 from vedastd.utils import build_from_cfg
-
 from .registry import CRITERIA
 
 

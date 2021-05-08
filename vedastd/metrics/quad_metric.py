@@ -4,6 +4,7 @@ from ..utils.icdar15 import DetectionIoUEvaluator
 
 
 class QuadMeasurer:
+
     def __init__(self, polygon=False, box_thresh=0.6):
         self.recalls = []
         self.precisions = []
@@ -35,11 +36,15 @@ class QuadMeasurer:
         pred_scores_batch = np.array(output[1])
         for polygons, pred_polygons, pred_scores, ignore_tags in \
                 zip(gt_polyons_batch, pred_polygons_batch, pred_scores_batch, ignore_tags_batch):
-            gt = [dict(points=polygons[i], ignore=ignore_tags[i])
-                  for i in range(len(polygons))]
+            gt = [
+                dict(points=polygons[i], ignore=ignore_tags[i])
+                for i in range(len(polygons))
+            ]
             if self.polygon:
-                pred = [dict(points=pred_polygons[i])
-                        for i in range(len(pred_polygons))]
+                pred = [
+                    dict(points=pred_polygons[i])
+                    for i in range(len(pred_polygons))
+                ]
             else:
                 pred = []
                 for i in range(pred_polygons.shape[0]):
@@ -48,7 +53,11 @@ class QuadMeasurer:
             results.append(self.evaluator.evaluate_image(gt, pred))
         return results
 
-    def validate_measure(self, batch, output, is_output_polygon=False, box_thresh=0.6):
+    def validate_measure(self,
+                         batch,
+                         output,
+                         is_output_polygon=False,
+                         box_thresh=0.6):
         return self.measure(batch, output)
 
     def evaluate_measure(self, batch, output):
@@ -56,9 +65,10 @@ class QuadMeasurer:
                np.linspace(0, batch['image'].shape[0]).tolist()
 
     def gather_measure(self, raw_metrics):
-        raw_metrics = [image_metrics
-                       for batch_metrics in raw_metrics
-                       for image_metrics in batch_metrics]
+        raw_metrics = [
+            image_metrics for batch_metrics in raw_metrics
+            for image_metrics in batch_metrics
+        ]
 
         result = self.evaluator.combine_results(raw_metrics)
 
@@ -72,8 +82,4 @@ class QuadMeasurer:
                          (precision.val + recall.val + 1e-8)
         fmeasure.update(fmeasure_score)
 
-        return {
-            'precision': precision,
-            'recall': recall,
-            'fmeasure': fmeasure
-        }
+        return {'precision': precision, 'recall': recall, 'fmeasure': fmeasure}

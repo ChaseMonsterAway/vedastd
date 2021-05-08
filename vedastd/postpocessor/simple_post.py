@@ -1,7 +1,6 @@
-import pdb
-
 import cv2
 import numpy as np
+import pdb
 import pyclipper
 import torch
 from shapely.geometry import Polygon
@@ -12,8 +11,15 @@ from .utils import pse
 
 @POSTPROCESS.register_module
 class Postprocessor:
-    def __init__(self, thresh=0.3, box_thresh=0.7, max_candidates=100, unclip_ratio=1.5,
-                 name='binary_map', min_size=3, debug=False):
+
+    def __init__(self,
+                 thresh=0.3,
+                 box_thresh=0.7,
+                 max_candidates=100,
+                 unclip_ratio=1.5,
+                 name='binary_map',
+                 min_size=3,
+                 debug=False):
         self.thresh = thresh
         self.box_thresh = box_thresh
         self.max_candidates = max_candidates
@@ -21,6 +27,9 @@ class Postprocessor:
         self.ur = unclip_ratio
         self.min_size = min_size
         self.debug = debug
+
+    def set_params(self, **kwargs):
+        self.__init__(**kwargs)
 
     def __call__(self, batch, _pred, training=False):
         images: torch.Tensor = batch['image']
@@ -43,8 +52,8 @@ class Postprocessor:
                 wscale, hscale = 1, 1
             # refer to threshold
             boxes, scores = self.boxes_from_bitmap(
-                _pred[self.dest][batch_index],
-                segmentation[batch_index], wscale, hscale, height, width)
+                _pred[self.dest][batch_index], segmentation[batch_index],
+                wscale, hscale, height, width)
             boxes_batch.append(boxes)
             scores_batch.append(scores)
         return boxes_batch, scores_batch
@@ -64,9 +73,8 @@ class Postprocessor:
         height, width = bitmap.shape
         boxes = []
         scores = []
-        contours, _ = cv2.findContours(
-            (bitmap * 255).astype(np.uint8),
-            cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        _, contours, _ = cv2.findContours((bitmap * 255).astype(np.uint8),
+                                          cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
         if self.debug:
             bitmap = cv2.cvtColor(pred * 255, cv2.COLOR_GRAY2BGR)
@@ -74,6 +82,7 @@ class Postprocessor:
         # TODO, SELECT TOP SELF.MAX_CANDIDATES DIRECTLY
         for contour in contours[:self.max_candidates]:
             points, sside = self.get_mini_boxes(contour)
+
             if sside < self.min_size:
                 continue
             points = np.array(points)
@@ -81,12 +90,17 @@ class Postprocessor:
 
             if self.debug:
                 points = points.astype(np.int32)
-                bitmap = cv2.polylines(
-                    bitmap, [points.reshape(-1, 2)], True, (255, 0, 0), 3)
-                bitmap = cv2.putText(
-                    bitmap, str(round(score, 3)),
-                    (points[:, 0].min(), points[:, 1].min()),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+                bitmap = cv2.polylines(bitmap, [points.reshape(-1, 2)], True,
+                                       (255, 0, 0), 3)
+                bitmap = cv2.putText(bitmap, str(round(score, 3)),
+                                     (points[:, 0].min(), points[:, 1].min()),
+                                     cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                                     (0, 255, 0))
+            # if self.debug:
+            #     cv2.imshow('mask', bitmap.astype(np.uint8))
+            #     cv2.waitKey()
+            # cv2.destroyAllWindows()
+            # print(score)
             if self.box_thresh > score:
                 continue
             scores.append(np.array(score))
@@ -96,8 +110,7 @@ class Postprocessor:
                 continue
             box = np.array(box)
             box[:, 0] = np.clip(np.round(box[:, 0] / wscale), 0, w)
-            box[:, 1] = np.clip(
-                np.round(box[:, 1] / hscale), 0, h)
+            box[:, 1] = np.clip(np.round(box[:, 1] / hscale), 0, h)
             boxes.append(np.array(box.tolist()))
 
         if self.debug:
@@ -132,8 +145,9 @@ class Postprocessor:
             index_2 = 3
             index_3 = 2
 
-        box = [points[index_1], points[index_2],
-               points[index_3], points[index_4]]
+        box = [
+            points[index_1], points[index_2], points[index_3], points[index_4]
+        ]
         return box, min(bounding_box[1])
 
     @staticmethod
@@ -164,8 +178,16 @@ class Postprocessor:
 
 @POSTPROCESS.register_module
 class PsePostprocessor:
-    def __init__(self, thresh=1.0, min_kernel_area=5, min_score=0.93, max_candidates=10, min_area=100,
-                 resize=False, name=('pred_text_map', 'pred_kernels_map'), debug=False):
+
+    def __init__(self,
+                 thresh=1.0,
+                 min_kernel_area=5,
+                 min_score=0.93,
+                 max_candidates=10,
+                 min_area=100,
+                 resize=False,
+                 name=('pred_text_map', 'pred_kernels_map'),
+                 debug=False):
         self.binary_th = thresh
         self.max_candidates = max_candidates
         self.min_area = min_area
@@ -216,8 +238,9 @@ class PsePostprocessor:
             # show_img *= 58
             # show_img += 110
             # cv2.imshow('input', show_img)
-            boxes, scores = self.boxes_from_bitmap(
-                kernels[batch_index], score[batch_index], wscale, hscale, height, width)
+            boxes, scores = self.boxes_from_bitmap(kernels[batch_index],
+                                                   score[batch_index], wscale,
+                                                   hscale, height, width)
             # for box in boxes:
             #     cv2.rectangle(show_img, tuple(box[0]), tuple(box[2]), (0, 255, 0))
             # cv2.imshow('ii', show_img)
@@ -253,10 +276,8 @@ class PsePostprocessor:
             bbox_i[:, 0] = bbox_i[:, 0] / wscale
             bbox_i[:, 1] = bbox_i[:, 1] / hscale
             bbox_i = bbox_i.astype('int32')
-            bbox_i[:, 0] = np.clip(
-                np.round(bbox_i[:, 0]), 0, w)
-            bbox_i[:, 1] = np.clip(
-                np.round(bbox_i[:, 1]), 0, h)
+            bbox_i[:, 0] = np.clip(np.round(bbox_i[:, 0]), 0, w)
+            bbox_i[:, 1] = np.clip(np.round(bbox_i[:, 1]), 0, h)
             b_list.append(bbox_i.tolist())
             s_list.append(s_i)
         return b_list, s_list

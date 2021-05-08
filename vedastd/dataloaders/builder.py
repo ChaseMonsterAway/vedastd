@@ -1,6 +1,5 @@
-from .registry import DATALOADERS
-
 from vedastd.utils import build_from_cfg
+from .registry import DATALOADERS
 
 
 def build_dataloader(cfg, default_args=None):

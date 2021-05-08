@@ -1,19 +1,18 @@
 import logging
-
 import torch.nn as nn
-from torchvision.models.resnet import model_urls, BasicBlock, Bottleneck, conv1x1
+from torchvision.models.resnet import (BasicBlock, Bottleneck, conv1x1,
+                                       model_urls)
 
 try:
     from torch.hub import load_state_dict_from_url
 except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 
-from vedastd.models.weight_init import init_weights
 from vedastd.models.utils import build_module, build_torch_nn
+from vedastd.models.weight_init import init_weights
 from .registry import BACKBONES
 
 logger = logging.getLogger()
-
 
 BLOCKS = {
     'BasicBlock': BasicBlock,
@@ -41,8 +40,15 @@ MODEL_CFGS = {
 
 class ResNetCls(nn.Module):
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
-                 groups=1, width_per_group=64, replace_stride_with_dilation=None, multi_grid=None,
+    def __init__(self,
+                 block,
+                 layers,
+                 num_classes=1000,
+                 zero_init_residual=False,
+                 groups=1,
+                 width_per_group=64,
+                 replace_stride_with_dilation=None,
+                 multi_grid=None,
                  norm_layer=None):
         super(ResNetCls, self).__init__()
 
@@ -58,24 +64,43 @@ class ResNetCls(nn.Module):
             replace_stride_with_dilation = [False, False, False]
         if len(replace_stride_with_dilation) != 3:
             raise ValueError("replace_stride_with_dilation should be None "
-                             "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
+                             "or a 3-element tuple, got {}".format(
+                                 replace_stride_with_dilation))
 
         self.groups = groups
         self.base_width = width_per_group
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv1 = nn.Conv2d(
+            3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = self._norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=2, dilate=replace_stride_with_dilation[0])
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=2, dilate=replace_stride_with_dilation[1])
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=2, dilate=replace_stride_with_dilation[2], multi_grid=multi_grid)
+        self.layer2 = self._make_layer(
+            block,
+            128,
+            layers[1],
+            stride=2,
+            dilate=replace_stride_with_dilation[0])
+        self.layer3 = self._make_layer(
+            block,
+            256,
+            layers[2],
+            stride=2,
+            dilate=replace_stride_with_dilation[1])
+        self.layer4 = self._make_layer(
+            block,
+            512,
+            layers[3],
+            stride=2,
+            dilate=replace_stride_with_dilation[2],
+            multi_grid=multi_grid)
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_in', nonlinearity='leaky_relu')
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -90,7 +115,13 @@ class ResNetCls(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False, multi_grid=None):
+    def _make_layer(self,
+                    block,
+                    planes,
+                    blocks,
+                    stride=1,
+                    dilate=False,
+                    multi_grid=None):
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
@@ -110,13 +141,19 @@ class ResNetCls(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
-                            self.base_width, previous_dilation*multi_grid[0]))
+        layers.append(
+            block(self.inplanes, planes, stride, downsample, self.groups,
+                  self.base_width, previous_dilation * multi_grid[0]))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, groups=self.groups,
-                                base_width=self.base_width, dilation=self.dilation*multi_grid[i],
-                                norm_layer=norm_layer))
+            layers.append(
+                block(
+                    self.inplanes,
+                    planes,
+                    groups=self.groups,
+                    base_width=self.base_width,
+                    dilation=self.dilation * multi_grid[i],
+                    norm_layer=norm_layer))
 
         return nn.Sequential(*layers)
 
@@ -145,7 +182,12 @@ class ResNet(ResNetCls):
     Args:
         pretrain(bool)
     """
-    def __init__(self, arch, replace_stride_with_dilation=None, multi_grid=None, pretrain=True):
+
+    def __init__(self,
+                 arch,
+                 replace_stride_with_dilation=None,
+                 multi_grid=None,
+                 pretrain=True):
         cfg = MODEL_CFGS[arch]
         super().__init__(
             cfg['block'],
@@ -188,8 +230,13 @@ class ResNet(ResNetCls):
 
 @BACKBONES.register_module
 class GResNet(nn.Module):
-    def __init__(self, layers, zero_init_residual=False,
-                 groups=1, width_per_group=64, norm_layer=None):
+
+    def __init__(self,
+                 layers,
+                 zero_init_residual=False,
+                 groups=1,
+                 width_per_group=64,
+                 norm_layer=None):
         super(GResNet, self).__init__()
 
         if norm_layer is None:
@@ -222,7 +269,8 @@ class GResNet(nn.Module):
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu')
+                nn.init.kaiming_normal_(
+                    m.weight, mode='fan_in', nonlinearity='leaky_relu')
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -254,13 +302,19 @@ class GResNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
-                            self.base_width, previous_dilation))
+        layers.append(
+            block(self.inplanes, planes, stride, downsample, self.groups,
+                  self.base_width, previous_dilation))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, groups=self.groups,
-                                base_width=self.base_width, dilation=self.dilation,
-                                norm_layer=norm_layer))
+            layers.append(
+                block(
+                    self.inplanes,
+                    planes,
+                    groups=self.groups,
+                    base_width=self.base_width,
+                    dilation=self.dilation,
+                    norm_layer=norm_layer))
 
         return nn.Sequential(*layers)
 

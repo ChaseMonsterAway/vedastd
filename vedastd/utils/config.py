@@ -1,11 +1,9 @@
-import sys
+import collections
 import os.path as osp
+import sys
+from addict import Dict
 from argparse import ArgumentParser
 from importlib import import_module
-
-from addict import Dict
-
-import collections
 
 if sys.version_info < (3, 3):
     Sequence = collections.Sequence
@@ -16,6 +14,7 @@ else:
 
 
 class ConfigDict(Dict):
+
     def __missing__(self, name):
         raise KeyError(name)
 
@@ -78,6 +77,7 @@ class Config(object):
         "Config [path: /home/kchen/projects/mmcv/tests/data/config/a.py]: "
         "{'item1': [1, 2], 'item2': {'a': 0}, 'item3': True, 'item4': 'test'}"
     """
+
     @staticmethod
     def fromfile(filename):
         filename = osp.abspath(osp.expanduser(filename))

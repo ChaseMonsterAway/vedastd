@@ -47,7 +47,7 @@ class Registry(object):
 
 def build_from_cfg(cfg, src, default_args=None, mode='registry'):
     if mode == 'registry':
-        return build_from_registry(cfg,  src, default_args=default_args)
+        return build_from_registry(cfg, src, default_args=default_args)
     elif mode == 'module':
         return build_from_module(cfg, src, default_args=default_args)
     else:

@@ -1,8 +1,6 @@
 import os
 import time
-
 import torch
-
 from collections import OrderedDict
 
 
@@ -19,7 +17,10 @@ def weights_to_cpu(state_dict):
     return state_dict_cpu
 
 
-def save_checkpoint(model, filename, optimizer=None, lr_scheduler=None,
+def save_checkpoint(model,
+                    filename,
+                    optimizer=None,
+                    lr_scheduler=None,
                     meta=None):
     """Save checkpoint to file.
     The checkpoint will have 3 fields: ``meta``, ``state_dict`` and

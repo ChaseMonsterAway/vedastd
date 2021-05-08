@@ -1,12 +1,12 @@
-from abc import ABCMeta, abstractmethod
-
 import numpy as np
+from abc import ABCMeta, abstractmethod
 
 
 class BaseMetric(object, metaclass=ABCMeta):
     """
     Base metric for segmentation metrics in an online manner.
-    This class is abstract, providing a standard interface for metrics of this type.
+    This class is abstract, providing a standard
+    interface for metrics of this type.
     """
 
     def __init__(self):

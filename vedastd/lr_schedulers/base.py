@@ -2,13 +2,15 @@ import warnings
 import weakref
 from functools import wraps
 
-import numpy as np
 from torch.optim import Optimizer
 
 
 class _Iter_LRScheduler:
 
-    def __init__(self, optimizer, niter_per_epoch, last_iter=-1,
+    def __init__(self,
+                 optimizer,
+                 niter_per_epoch,
+                 last_iter=-1,
                  iter_based=True):
         self._iter_based = iter_based
         if not isinstance(optimizer, Optimizer):
@@ -23,9 +25,10 @@ class _Iter_LRScheduler:
         else:
             for i, group in enumerate(optimizer.param_groups):
                 if 'initial_lr' not in group:
-                    raise KeyError("param 'initial_lr' is not specified "
-                                   "in param_groups[{}] when resuming an optimizer".format(
-                        i))
+                    raise KeyError(
+                        "param 'initial_lr' is not specified "
+                        "in param_groups[{}] when resuming an optimizer".
+                            format(i))
         self.base_lrs = list(
             map(lambda group: group['initial_lr'], optimizer.param_groups))
         self.last_epoch = int(last_iter / niter_per_epoch)
@@ -69,8 +72,10 @@ class _Iter_LRScheduler:
         It contains an entry for every variable in self.__dict__ which
         is not the optimizer.
         """
-        return {key: value for key, value in self.__dict__.items() if
-                key != 'optimizer'}
+        return {
+            key: value
+            for key, value in self.__dict__.items() if key != 'optimizer'
+        }
 
     def load_state_dict(self, state_dict):
         """Loads the schedulers state.
@@ -89,21 +94,24 @@ class _Iter_LRScheduler:
         if self._step_count == 1:
             if not hasattr(self.optimizer.step, "_with_counter"):
                 warnings.warn(
-                    "Seems like `optimizer.step()` has been overridden after learning rate scheduler "
-                    "initialization. Please, make sure to call `optimizer.step()` before "
+                    "Seems like `optimizer.step()` has been overridden after"
+                    " learning rate scheduler initialization. Please, make "
+                    "sure to call `optimizer.step()` before "
                     "`lr_scheduler.step()`. See more details at "
-                    "https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate",
+                    "https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate",  # noqa 501
                     UserWarning)
 
             # Just check if there were two first lr_scheduler.step() calls before optimizer.step()
             elif self.optimizer._step_count < 1:
                 warnings.warn(
-                    "Detected call of `lr_scheduler.step()` before `optimizer.step()`. "
-                    "In PyTorch 1.1.0 and later, you should call them in the opposite order: "
-                    "`optimizer.step()` before `lr_scheduler.step()`.  Failure to do this "
-                    "will result in PyTorch skipping the first value of the learning rate schedule."
+                    "Detected call of `lr_scheduler.step()` before "
+                    "`optimizer.step()`. In PyTorch 1.1.0 and later, you "
+                    "should call them in the opposite order: "
+                    "`optimizer.step()` before `lr_scheduler.step()`.  "
+                    "Failure to do this will result in PyTorch skipping the "
+                    "first value of the learning rate schedule. "
                     "See more details at "
-                    "https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate",
+                    "https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate",  # noqa 501
                     UserWarning)
         self._step_count += 1
 

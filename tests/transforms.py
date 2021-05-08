@@ -15,7 +15,7 @@ is_show = True
 
 def imshow(name, img):
     if is_show:
-        cv2.namedWindow(name, 0)
+        cv2.namedWindow(name, 1)
         cv2.imshow(name, img)
     else:
         pass
@@ -187,15 +187,16 @@ def test_other_transform_make_map():
 
     cfg = [
         # dict(type='LongestMaxSize', max_size=640, interpolation='bilinear', p=1),
-        dict(type='RandomScale', scale_range=(0.5, 3.0)),
-        dict(type='Rotate', limit=10, border_mode='constant', value=0),
+        # dict(type='RandomScale', scale_range=(0.5, 3.0)),
         dict(type='IAAFliplr', p=0.5),
+        dict(type='Rotate', limit=10, border_mode='constant', value=0),
+        dict(type='RandomScale', scale_range=(0.5, 3.0)),
         # dict(type='Rotate', interpolation='bilinear', border_mode='constant', value=0, p=1),
         dict(type='RandomCropBasedOnBox'),
-        # dict(type='PadIfNeeded', min_height=640, min_width=640, border_mode='constant',
-        #      value=0),
+        dict(type='PadorResize', min_height=640, min_width=640, border_mode='constant',
+             value=0),
         dict(type='KeypointsToPolygon'),
-        dict(type='MakeShrinkMap', ratios=[0.6],
+        dict(type='MakeShrinkMap', ratios=[0.4],
              max_shr=20, min_text_size=8, p=1),
         dict(type='MaskMarker', name='gt'),
         dict(type='MakeBorderMap', shrink_ratio=0.4),

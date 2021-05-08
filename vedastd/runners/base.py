@@ -1,21 +1,21 @@
+import numpy as np
 import os
 import pdb
 import random
-
 import torch
 from torch.backends import cudnn
-import numpy as np
 
-from ..logger import build_logger
 from ..dataloaders import build_dataloader
 from ..dataloaders.collate_fn import build_collate_fn
 from ..datasets import build_datasets
-from ..transforms import build_transform
+from ..logger import build_logger
 from ..metrics import build_metric
 from ..postpocessor import build_postprocessor
+from ..transforms import build_transform
 
 
 class Common(object):
+
     def __init__(self, cfg):
         super(Common, self).__init__()
 
@@ -23,7 +23,7 @@ class Common(object):
         logger_cfg = cfg.get('logger')
         if logger_cfg is None:
             logger_cfg = dict(
-                handlers=(dict(type='StreamHandler', level='INFO'),))
+                handlers=(dict(type='StreamHandler', level='INFO'), ))
         self.workdir = cfg.get('workdir')
         self.logger = self._build_logger(logger_cfg)
 
@@ -40,7 +40,8 @@ class Common(object):
 
         # build postprocessor
         if 'postprocessor' in cfg:
-            self.postprocessor = self._build_postprocessor(cfg['postprocessor'])
+            self.postprocessor = self._build_postprocessor(
+                cfg['postprocessor'])
 
         # build metric
         if 'metric' in cfg:
@@ -87,7 +88,9 @@ class Common(object):
     def _build_dataloader(self, cfg):
         transform = build_transform(cfg['transforms'])
         dataset = build_datasets(cfg['dataset'], dict(transforms=transform))
-        collate_fn = build_collate_fn(cfg['collate_fn']) if cfg.get('collate_fn') else None
-        dataloader = build_dataloader(cfg['dataloader'], dict(dataset=dataset, collate_fn=collate_fn))
+        collate_fn = build_collate_fn(
+            cfg['collate_fn']) if cfg.get('collate_fn') else None
+        dataloader = build_dataloader(
+            cfg['dataloader'], dict(dataset=dataset, collate_fn=collate_fn))
 
         return dataloader

@@ -1,15 +1,21 @@
 import torch.nn as nn
 
 from .backbone.bulder import build_backbone
+from .enhancemodule.bricks import build_brick
 from .enhancemodule.builder import build_enhance
 from .heads.builder import build_head
-from .enhancemodule.bricks import build_brick
 from .registry import MODELS
 
 
 @MODELS.register_module
 class GModel(nn.Module):
-    def __init__(self, backbone=None, enhance=None, collect=None, fusion=None, head=None):
+
+    def __init__(self,
+                 backbone=None,
+                 enhance=None,
+                 collect=None,
+                 fusion=None,
+                 head=None):
         super(GModel, self).__init__()
 
         self.body = build_backbone(backbone) if backbone else None

@@ -1,9 +1,10 @@
-import torch
 import numpy as np
+import torch
 
 
 def ohem_single(pred_text, gt_text, mask):  # shape h*w
-    pos_num = torch.sum(gt_text > 0.5) - torch.sum((gt_text > 0.5) & (mask <= 0.5))
+    pos_num = torch.sum(gt_text > 0.5) - torch.sum((gt_text > 0.5)
+                                                   & (mask <= 0.5))
 
     if pos_num == 0:
         selected_mask = mask
@@ -29,11 +30,14 @@ def ohem_batch(scores, gt_texts, training_masks):  # shape: B*H*W
 
     selected_masks = []
     for i in range(scores.shape[0]):
-        selected_masks.append(ohem_single(scores[i, :, :], gt_texts[i, :, :], training_masks[i, :, :]))
+        selected_masks.append(
+            ohem_single(scores[i, :, :], gt_texts[i, :, :],
+                        training_masks[i, :, :]))
 
     selected_masks = torch.cat(selected_masks, 0)
 
     return selected_masks
+
 
 # if __name__ == '__main__':
 #     torch.manual_seed(1)

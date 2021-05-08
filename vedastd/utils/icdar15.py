@@ -1,10 +1,10 @@
-from collections import namedtuple
-
 import numpy as np
+from collections import namedtuple
 from shapely.geometry import Polygon
 
 
 class DetectionIoUEvaluator(object):
+
     def __init__(self, iou_constraint=0.5, area_precision_constraint=0.5):
         self.iou_constraint = iou_constraint
         self.area_precision_constraint = area_precision_constraint
@@ -12,13 +12,15 @@ class DetectionIoUEvaluator(object):
     def evaluate_image(self, gt, pred):
 
         def get_union(pD, pG):
-            return Polygon(pD).union(Polygon(pG)).area
+            return Polygon(pD).buffer(0.01).union(
+                Polygon(pG).buffer(0.01)).area
 
         def get_intersection_over_union(pD, pG):
             return get_intersection(pD, pG) / get_union(pD, pG)
 
         def get_intersection(pD, pG):
-            return Polygon(pD).intersection(Polygon(pG)).area
+            return Polygon(pD).buffer(0.01).intersection(
+                Polygon(pG).buffer(0.01)).area
 
         def compute_ap(confList, matchList, numGtCare):
             correct = 0
@@ -83,7 +85,8 @@ class DetectionIoUEvaluator(object):
             points = gt[n]['points']
             dontCare = gt[n]['ignore']
 
-            if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            if not Polygon(points).buffer(0.01).is_valid or not Polygon(
+                    points).buffer(0.01).is_simple:
                 continue
 
             gtPol = points
@@ -92,12 +95,14 @@ class DetectionIoUEvaluator(object):
             if not dontCare:
                 gtDontCarePolsNum.append(len(gtPols) - 1)
 
-        evaluationLog += "GT polygons: " + str(len(gtPols)) + (" (" + str(len(
-            gtDontCarePolsNum)) + " don't care)\n" if len(gtDontCarePolsNum) > 0 else "\n")
+        evaluationLog += "GT polygons: " + str(len(gtPols)) + (
+            " (" + str(len(gtDontCarePolsNum)) +
+            " don't care)\n" if len(gtDontCarePolsNum) > 0 else "\n")
 
         for n in range(len(pred)):
             points = pred[n]['points']
-            if not Polygon(points).is_valid or not Polygon(points).is_simple:
+            if not Polygon(points).buffer(0.01).is_valid or not Polygon(
+                    points).buffer(0.01).is_simple:
                 continue
 
             detPol = points
@@ -107,14 +112,15 @@ class DetectionIoUEvaluator(object):
                 for dontCarePol in gtDontCarePolsNum:
                     dontCarePol = gtPols[dontCarePol]
                     intersected_area = get_intersection(dontCarePol, detPol)
-                    pdDimensions = Polygon(detPol).area
+                    pdDimensions = Polygon(detPol).buffer(0.01).area
                     precision = 0 if pdDimensions == 0 else intersected_area / pdDimensions
                     if (precision > self.area_precision_constraint):
                         detDontCarePolsNum.append(len(detPols) - 1)
                         break
 
-        evaluationLog += "DET polygons: " + str(len(detPols)) + (" (" + str(len(
-            detDontCarePolsNum)) + " don't care)\n" if len(detDontCarePolsNum) > 0 else "\n")
+        evaluationLog += "DET polygons: " + str(len(detPols)) + (
+            " (" + str(len(detDontCarePolsNum)) +
+            " don't care)\n" if len(detDontCarePolsNum) > 0 else "\n")
 
         if len(gtPols) > 0 and len(detPols) > 0:
             # Calculate IoU and precision matrixs
@@ -140,8 +146,8 @@ class DetectionIoUEvaluator(object):
                             detMatchedNums.append(detNum)
                             evaluationLog += "Match GT #" + \
                                              str(gtNum) + " with Det #" + str(detNum) + "\n"
-        print('#' * 20, 'iouMat', '#' * 20)
-        print(iouMat)
+        # print('#' * 20, 'iouMat', '#' * 20)
+        # print(iouMat)
         numGtCare = (len(gtPols) - len(gtDontCarePolsNum))
         numDetCare = (len(detPols) - len(detDontCarePolsNum))
         if numGtCare == 0:
@@ -151,10 +157,10 @@ class DetectionIoUEvaluator(object):
             recall = float(detMatched) / numGtCare
             precision = 0 if numDetCare == 0 else float(
                 detMatched) / numDetCare
-        print('#' * 20, 'iouMat', '#' * 20)
-        print('$' * 20, 'recall, precision, fmean', '$' * 20)
-        print('recall,', recall, 'precision,', precision)
-        print('$' * 20, 'recall, precision, fmean', '$' * 20)
+        # print('#' * 20, 'iouMat', '#' * 20)
+        # print('$' * 20, 'recall, precision, fmean', '$' * 20)
+        # print('recall,', recall, 'precision,', precision)
+        # print('$' * 20, 'recall, precision, fmean', '$' * 20)
 
         hmean = 0 if (precision + recall) == 0 else 2.0 * \
                                                     precision * recall / (precision + recall)
@@ -197,8 +203,11 @@ class DetectionIoUEvaluator(object):
                                                                     methodRecall * methodPrecision / (
                                                                             methodRecall + methodPrecision)
 
-        methodMetrics = {'precision': methodPrecision,
-                         'recall': methodRecall, 'hmean': methodHmean}
+        methodMetrics = {
+            'precision': methodPrecision,
+            'recall': methodRecall,
+            'hmean': methodHmean
+        }
 
         return methodMetrics
 
@@ -222,6 +231,6 @@ if __name__ == '__main__':
     results = []
     for gt, pred in zip(gts, preds):
         results.append(evaluator.evaluate_image(gt, pred))
-    print(results)
+    # print(results)
     metrics = evaluator.combine_results(results)
-    print(metrics)
+    # print(metrics)

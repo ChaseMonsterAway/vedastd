@@ -1,8 +1,7 @@
 import numpy as np
-import pdb
 
-from ..utils.icdar15 import DetectionIoUEvaluator
 from .registry import METRICS
+from ..utils.icdar15 import DetectionIoUEvaluator
 
 
 class AverageMeter(object):
@@ -27,6 +26,7 @@ class AverageMeter(object):
 
 @METRICS.register_module
 class QuadMeasurer2:
+
     def __init__(self, polygon=False):
         self.recalls = []
         self.precisions = []
@@ -61,23 +61,29 @@ class QuadMeasurer2:
         for polygons, pred_polygons, pred_scores, tags in \
                 zip(gt_polyons_batch, pred_polygons_batch, pred_scores_batch,
                     tags_batch):
-            gt = [dict(points=polygons[i], ignore=tags[i])
-                  for i in range(len(polygons))]
+            gt = [
+                dict(points=polygons[i], ignore=tags[i])
+                for i in range(len(polygons))
+            ]
             if self.polygon:
-                pred = [dict(points=pred_polygons[i])
-                        for i in range(len(pred_polygons))]
+                pred = [
+                    dict(points=pred_polygons[i])
+                    for i in range(len(pred_polygons))
+                ]
             else:
                 pred = []
                 if isinstance(pred_polygons, list):
                     pred_polygons = np.array(pred_polygons)
                 for i in range(pred_polygons.shape[0]):
-                    pred.append(
-                        dict(points=pred_polygons[i, :, :].tolist()))
+                    pred.append(dict(points=pred_polygons[i, :, :].tolist()))
 
             results.append(self.evaluator.evaluate_image(gt, pred))
         return results
 
-    def validate_measure(self, batch, boxes, is_output_polygon=False,
+    def validate_measure(self,
+                         batch,
+                         boxes,
+                         is_output_polygon=False,
                          training=False):
         return self.measure(batch, boxes, training)
 
@@ -86,9 +92,10 @@ class QuadMeasurer2:
                np.linspace(0, batch['image'].shape[0]).tolist()
 
     def gather_measure(self, raw_metrics):
-        raw_metrics = [image_metrics
-                       for batch_metrics in raw_metrics
-                       for image_metrics in batch_metrics]
+        raw_metrics = [
+            image_metrics for batch_metrics in raw_metrics
+            for image_metrics in batch_metrics
+        ]
 
         result = self.evaluator.combine_results(raw_metrics)
 
@@ -102,15 +109,12 @@ class QuadMeasurer2:
                          (precision.val + recall.val + 1e-8)
         fmeasure.update(fmeasure_score)
 
-        return {
-            'precision': precision,
-            'recall': recall,
-            'fmeasure': fmeasure
-        }
+        return {'precision': precision, 'recall': recall, 'fmeasure': fmeasure}
 
 
 @METRICS.register_module
 class QuadMeasurer:
+
     def __init__(self, polygon=False, measure_phase=('train', 'val')):
         self.recalls = []
         self.precisions = []
@@ -128,8 +132,10 @@ class QuadMeasurer:
         batch: (image, polygons, ignore_tags
         batch: a dict produced by dataloaders.
             image: tensor of shape (N, C, H, W).
-            polygons: tensor of shape (N, K, 4, 2), the polygons of objective regions.
-            tags: tensor of shape (N, K), indicates whether a region is ignorable or not.
+            polygons: tensor of shape (N, K, 4, 2), the polygons
+             of objective regions.
+            tags: tensor of shape (N, K), indicates whether a region is
+             ignorable or not.
             shape: the original shape of images.
             filename: the original filenames of images.
         output: (polygons, ...)
@@ -145,18 +151,21 @@ class QuadMeasurer:
         for polygons, pred_polygons, pred_scores, tags in \
                 zip(gt_polyons_batch, pred_polygons_batch, pred_scores_batch,
                     tags_batch):
-            gt = [dict(points=polygons[i], ignore=tags[i])
-                  for i in range(len(polygons))]
+            gt = [
+                dict(points=polygons[i], ignore=tags[i])
+                for i in range(len(polygons))
+            ]
             if self.polygon:
-                pred = [dict(points=pred_polygons[i])
-                        for i in range(len(pred_polygons))]
+                pred = [
+                    dict(points=pred_polygons[i])
+                    for i in range(len(pred_polygons))
+                ]
             else:
                 pred = []
                 if isinstance(pred_polygons, list):
                     pred_polygons = np.array(pred_polygons)
                 for i in range(pred_polygons.shape[0]):
-                    pred.append(
-                        dict(points=pred_polygons[i, :, :].tolist()))
+                    pred.append(dict(points=pred_polygons[i, :, :].tolist()))
 
             results.append(self.evaluator.evaluate_image(gt, pred))
         self.history.append(results)
@@ -164,9 +173,10 @@ class QuadMeasurer:
     @property
     def metrics(self):
 
-        raw_metrics = [image_metrics
-                       for batch_metrics in self.history
-                       for image_metrics in batch_metrics]
+        raw_metrics = [
+            image_metrics for batch_metrics in self.history
+            for image_metrics in batch_metrics
+        ]
 
         result = self.evaluator.combine_results(raw_metrics)
         precision = AverageMeter()

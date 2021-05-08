@@ -3,12 +3,11 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
 
-import cv2
-import numpy as np
+import cv2 # noqa 402
 
-from vedastd.transforms import build_transform, MaskMarker
-from vedastd.datasets import build_datasets
-from tests.utils import tensor_to_numpy, imshow, show_polygon
+from vedastd.transforms import build_transform, MaskMarker # noqa 402
+from vedastd.datasets import build_datasets # noqa 402
+from tests.utils import tensor_to_numpy, imshow, show_polygon # noqa 402
 
 is_show = True
 

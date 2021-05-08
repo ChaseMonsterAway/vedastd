@@ -1,14 +1,14 @@
-import random
-from functools import partial
-
+import albumentations as alb
 import cv2
 import numpy as np
 import pyclipper
+import random
 import torch
+from functools import partial
 from shapely.geometry import Polygon
 
-import albumentations as alb
 from .registry import TRANSFORMS
+
 CV2_MODE = {
     'bilinear': cv2.INTER_LINEAR,
     'nearest': cv2.INTER_NEAREST,
@@ -34,6 +34,7 @@ predefined keys:  模型输入：input
 
 
 class Compose:
+
     def __init__(self, transforms):
         self.transforms = transforms
 
@@ -79,7 +80,7 @@ class MakeShrinkMap:
         tags = data['tags']
         h, w = image.shape[:2]
         for ratio in self.ratios:
-            ratio = 1 - ratio ** 2
+            ratio = 1 - ratio**2
             current_shrink_map = np.zeros(shape=(h, w, 1), dtype=np.float32)
             current_mask_map = np.ones(shape=(h, w, 1), dtype=np.float32)
             for idx, polygon in enumerate(polygons):
@@ -146,10 +147,10 @@ class MakeBoarderMap:
         for i in range(len(polygons)):
             if not tags[i]:
                 continue
-            self.draw_border_map(polygons[i], canvas[:, :, 0],
-                                 mask=mask[:, :, 0])
-            canvas = canvas * (
-                    self.thresh_max - self.thresh_min) + self.thresh_min
+            self.draw_border_map(
+                polygons[i], canvas[:, :, 0], mask=mask[:, :, 0])
+            canvas = canvas * (self.thresh_max -
+                               self.thresh_min) + self.thresh_min
             data['boarder_map'] = canvas
             data['boarder_mask'] = mask
 
@@ -190,8 +191,8 @@ class MakeBoarderMap:
             np.linspace(0, height - 1, num=height).reshape(height, 1),
             (height, width))
 
-        distance_map = np.zeros(
-            (polygon.shape[0], height, width), dtype=np.float32)
+        distance_map = np.zeros((polygon.shape[0], height, width),
+                                dtype=np.float32)
         for i in range(polygon.shape[0]):
             j = (i + 1) % polygon.shape[0]
             absolute_distance = self.distance(xs, ys, polygon[i], polygon[j])
@@ -203,9 +204,8 @@ class MakeBoarderMap:
         ymin_valid = min(max(0, ymin), canvas.shape[0] - 1)
         ymax_valid = min(max(0, ymax), canvas.shape[0] - 1)
         canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1] = np.fmax(
-            1 - distance_map[
-                ymin_valid - ymin:ymax_valid - ymax + height,
-                xmin_valid - xmin:xmax_valid - xmax + width],
+            1 - distance_map[ymin_valid - ymin:ymax_valid - ymax + height,
+                             xmin_valid - xmin:xmax_valid - xmax + width],
             canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1])
 
     def distance(self, xs, ys, point_1, point_2):
@@ -216,44 +216,64 @@ class MakeBoarderMap:
         point_1, point_2: (x, y), the end of the line
         '''
         height, width = xs.shape[:2]
-        square_distance_1 = np.square(
-            xs - point_1[0]) + np.square(ys - point_1[1])
-        square_distance_2 = np.square(
-            xs - point_2[0]) + np.square(ys - point_2[1])
-        square_distance = np.square(
-            point_1[0] - point_2[0]) + np.square(point_1[1] - point_2[1])
+        square_distance_1 = np.square(xs - point_1[0]) + np.square(ys -
+                                                                   point_1[1])
+        square_distance_2 = np.square(xs - point_2[0]) + np.square(ys -
+                                                                   point_2[1])
+        square_distance = np.square(point_1[0] -
+                                    point_2[0]) + np.square(point_1[1] -
+                                                            point_2[1])
 
         cosin = (square_distance - square_distance_1 - square_distance_2) / \
                 (2 * np.sqrt(square_distance_1 * square_distance_2))
         square_sin = 1 - np.square(cosin)
         square_sin = np.nan_to_num(square_sin)
-        result = np.sqrt(square_distance_1 * square_distance_2 *
-                         square_sin / square_distance)
+        result = np.sqrt(square_distance_1 * square_distance_2 * square_sin /
+                         square_distance)
 
-        result[cosin < 0] = np.sqrt(np.fmin(
-            square_distance_1, square_distance_2))[cosin < 0]
+        result[cosin < 0] = np.sqrt(
+            np.fmin(square_distance_1, square_distance_2))[cosin < 0]
 
         return result
 
     def extend_line(self, point_1, point_2, result):
-        ex_point_1 = (int(round(
-            point_1[0] + (point_1[0] - point_2[0]) * (1 + self.shrink_ratio))),
-                      int(round(point_1[1] + (point_1[1] - point_2[1]) * (
-                              1 + self.shrink_ratio))))
-        cv2.line(result, tuple(ex_point_1), tuple(point_1),
-                 4096.0, 1, lineType=cv2.LINE_AA, shift=0)
-        ex_point_2 = (int(round(
-            point_2[0] + (point_2[0] - point_1[0]) * (1 + self.shrink_ratio))),
-                      int(round(point_2[1] + (point_2[1] - point_1[1]) * (
-                              1 + self.shrink_ratio))))
-        cv2.line(result, tuple(ex_point_2), tuple(point_2),
-                 4096.0, 1, lineType=cv2.LINE_AA, shift=0)
+        ex_point_1 = (int(
+            round(point_1[0] + (point_1[0] - point_2[0]) *
+                  (1 + self.shrink_ratio))),
+                      int(
+                          round(point_1[1] + (point_1[1] - point_2[1]) *
+                                (1 + self.shrink_ratio))))
+        cv2.line(
+            result,
+            tuple(ex_point_1),
+            tuple(point_1),
+            4096.0,
+            1,
+            lineType=cv2.LINE_AA,
+            shift=0)
+        ex_point_2 = (int(
+            round(point_2[0] + (point_2[0] - point_1[0]) *
+                  (1 + self.shrink_ratio))),
+                      int(
+                          round(point_2[1] + (point_2[1] - point_1[1]) *
+                                (1 + self.shrink_ratio))))
+        cv2.line(
+            result,
+            tuple(ex_point_2),
+            tuple(point_2),
+            4096.0,
+            1,
+            lineType=cv2.LINE_AA,
+            shift=0)
         return ex_point_1, ex_point_2
 
 
 @TRANSFORMS.register_module
 class Normalize:
-    def __init__(self, mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5),
+
+    def __init__(self,
+                 mean=(127.5, 127.5, 127.5),
+                 std=(127.5, 127.5, 127.5),
                  key: str = 'input'):
         self.mean = mean
         self.std = std
@@ -262,10 +282,11 @@ class Normalize:
     def __call__(self, data):
         assert self.key in data, f'{self.key} is not in data, pls check it'
         image = data[self.key]
-        mean = torch.as_tensor(self.mean, dtype=torch.float32,
-                               device=image.device).view(-1, 1, 1)
-        std = torch.as_tensor(self.std, dtype=torch.float32,
-                              device=image.device).view(-1, 1, 1)
+        mean = torch.as_tensor(
+            self.mean, dtype=torch.float32,
+            device=image.device).view(-1, 1, 1)
+        std = torch.as_tensor(
+            self.std, dtype=torch.float32, device=image.device).view(-1, 1, 1)
         image.sub_(mean).div_(std)
 
         data[self.key] = image
@@ -275,7 +296,11 @@ class Normalize:
 
 @TRANSFORMS.register_module
 class PadIfNeeded:
-    def __init__(self, factor=32, pad_value=0, img_border_mode='constant',
+
+    def __init__(self,
+                 factor=32,
+                 pad_value=0,
+                 img_border_mode='constant',
                  mask_border_mode='constant'):
         self.factor = factor
         self.pad_value = pad_value
@@ -320,6 +345,7 @@ class PadIfNeeded:
 
 @TRANSFORMS.register_module
 class RandomFlip:
+
     def __init__(self, p, horizontal, vertical):
         self.p = p
         self.h = horizontal
@@ -370,9 +396,14 @@ class RandomFlip:
 @TRANSFORMS.register_module
 class RandomRotation(object):
 
-    def __init__(self, img_value=0, mask_value=0, angles: tuple = None, p=0.5,
+    def __init__(self,
+                 img_value=0,
+                 mask_value=0,
+                 angles: tuple = None,
+                 p=0.5,
                  img_mode='bilinear',
-                 img_border_mode='constant', mask_mode='bilinear',
+                 img_border_mode='constant',
+                 mask_mode='bilinear',
                  mask_border_mode='constant'):
         self.p = 1 - p
         self.angles = angles if angles is not None else (0, 360)
@@ -386,9 +417,12 @@ class RandomRotation(object):
     def affine(self, image, rotation_mat, h, w, mode, border_mode,
                border_value):
         ndims = image.ndim
-        new_img = cv2.warpAffine(image, rotation_mat, (w, h), flags=mode,
-                                 borderMode=border_mode,
-                                 borderValue=border_value)
+        new_img = cv2.warpAffine(
+            image,
+            rotation_mat, (w, h),
+            flags=mode,
+            borderMode=border_mode,
+            borderValue=border_value)
         if new_img.ndim != ndims:
             new_img = new_img[:, :, np.newaxis]
         return new_img
@@ -418,15 +452,19 @@ class RandomRotation(object):
             if isinstance(values, list):
                 temp_list = []
                 for value in values:
-                    new_img = affine(image=value, mode=mode,
-                                     border_mode=border_mode,
-                                     border_value=pad_value)
+                    new_img = affine(
+                        image=value,
+                        mode=mode,
+                        border_mode=border_mode,
+                        border_value=pad_value)
                     temp_list.append(new_img)
                 data[key] = temp_list
             else:
-                new_img = affine(image=values, mode=mode,
-                                 border_mode=border_mode,
-                                 border_value=pad_value)
+                new_img = affine(
+                    image=values,
+                    mode=mode,
+                    border_mode=border_mode,
+                    border_value=pad_value)
                 data[key] = new_img
         # for item in data['kernels_mask']:
         #     cv2.imshow('map', item)
@@ -437,9 +475,15 @@ class RandomRotation(object):
 
 @TRANSFORMS.register_module
 class Resize:
-    def __init__(self, size, keep_ratio=False, random_scale=False,
-                 img_mode='cubic', mask_mode='nearest',
-                 max_size=1280, scale_list=(0.5, 1.0, 2.0, 3.0)):
+
+    def __init__(self,
+                 size,
+                 keep_ratio=False,
+                 random_scale=False,
+                 img_mode='cubic',
+                 mask_mode='nearest',
+                 max_size=1280,
+                 scale_list=(0.5, 1.0, 2.0, 3.0)):
         self.h = size[0]
         self.w = size[1]
         self.keep_ratio = keep_ratio
@@ -477,8 +521,8 @@ class Resize:
     def _resize(self, image, mode):
         ndims = image.ndim
         target_size, ratio = self._get_target_size(image)
-        new_image = cv2.resize(image, target_size[::-1],
-                               interpolation=CV2_MODE[mode])
+        new_image = cv2.resize(
+            image, target_size[::-1], interpolation=CV2_MODE[mode])
 
         if new_image.ndim != ndims:
             new_image = new_image[:, :, np.newaxis]
@@ -521,6 +565,7 @@ class Resize:
 
 @TRANSFORMS.register_module
 class RandomCrop:
+
     def __init__(self, size, p=3.0 / 8.0, prefix='text'):
         self.h = size[0]
         self.w = size[1]
@@ -671,6 +716,7 @@ class ToTensor:
 
 @TRANSFORMS.register_module
 class Canvas:
+
     def __init__(self, size, img_v=255, mask_v=255):
         self.h = size[0]
         self.w = size[1]

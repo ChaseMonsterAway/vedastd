@@ -2,11 +2,19 @@ from abc import abstractmethod
 
 import torch.nn as nn
 
+from .registry import CRITERIA
 
+
+@CRITERIA.register_module
 class BaseLoss(nn.Module):
 
-    def __init__(self, pred_map: str, target: str, loss_weight: (int, float), loss_name: str,
-                 ohem: bool = False, effective_mask_first: bool = False):
+    def __init__(self,
+                 pred_map: str,
+                 target: str,
+                 loss_weight: (int, float),
+                 loss_name: str,
+                 ohem: bool = False,
+                 effective_mask_first: bool = False):
         super(BaseLoss, self).__init__()
         self.pred_map = pred_map
         self.target = target
@@ -29,11 +37,5 @@ class BaseLoss(nn.Module):
         return pred_map, gt_masks, effective_masks
 
     @abstractmethod
-    def _forward(self, pred, target):
-        pass
-
-    @abstractmethod
     def forward(self, pred, target):
-        loss = self._forward(pred, target)
-
-        return self.loss_weight * loss
+        pass

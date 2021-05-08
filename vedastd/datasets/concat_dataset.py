@@ -1,14 +1,18 @@
 from torch.utils.data import ConcatDataset
 
-from .registry import DATASETS
 from .builder import build_datasets
+from .registry import DATASETS
 
 
 @DATASETS.register_module
 class ConcatDatasets(ConcatDataset):
 
-    def __init__(self, datasets, transform=None, character='abcdefghijklmnopqrstuvwxyz0123456789',
-                 batch_max_length=25, data_filter_off=False):
+    def __init__(self,
+                 datasets,
+                 transform=None,
+                 character='abcdefghijklmnopqrstuvwxyz0123456789',
+                 batch_max_length=25,
+                 data_filter_off=False):
         assert isinstance(datasets, list)
         _params = dict(
             transform=transform,

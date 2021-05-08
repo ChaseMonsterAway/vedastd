@@ -1,14 +1,14 @@
-import pdb
-
-import torch
 import numpy as np
+import pdb
+import torch
 
-from .base import Common
 from ..models import build_model
 from ..utils import load_checkpoint
+from .base import Common
 
 
 class InferenceRunner(Common):
+
     def __init__(self, inference_cfg, common_cfg=None):
         inference_cfg = inference_cfg.copy()
         common_cfg = {} if common_cfg is None else common_cfg.copy()
@@ -18,7 +18,8 @@ class InferenceRunner(Common):
 
         # build postprocessor
         if 'postprocessor' in inference_cfg:
-            self.postprocessor = self._build_postprocessor(inference_cfg['postprocessor'])
+            self.postprocessor = self._build_postprocessor(
+                inference_cfg['postprocessor'])
 
         # build test transform
         self.transform = self._build_transform(inference_cfg['transforms'])

@@ -1,12 +1,11 @@
-import random
-import logging
-import threading
-
 import albumentations as alb
 import albumentations.augmentations.functional as F
 import cv2
+import logging
 import numpy as np
 import pyclipper
+import random
+import threading
 import torch
 from shapely.geometry import Polygon
 
@@ -32,9 +31,17 @@ logger = logging.getLogger('Transforms')
 @TRANSFORMS.register_module
 class RandomScale(alb.Resize):
 
-    def __init__(self, scale_range=(0.5, 2.0), step=None, interpolation='bilinear', p=1):
-        super(RandomScale, self).__init__(always_apply=True, interpolation=CV2_MODE[interpolation], height=0, width=0,
-                                          p=p)
+    def __init__(self,
+                 scale_range=(0.5, 2.0),
+                 step=None,
+                 interpolation='bilinear',
+                 p=1):
+        super(RandomScale, self).__init__(
+            always_apply=True,
+            interpolation=CV2_MODE[interpolation],
+            height=0,
+            width=0,
+            p=p)
         self.scale_range = scale_range
         self.step = step
 
@@ -43,10 +50,15 @@ class RandomScale(alb.Resize):
         return ['image']
 
     def apply(self, img, interpolation=cv2.INTER_LINEAR, **params):
-        return F.resize(img, height=params['height'], width=params['width'],
-                        interpolation=interpolation)
+        # print('apply, ', params)
+        return F.resize(
+            img,
+            height=params['height'],
+            width=params['width'],
+            interpolation=interpolation)
 
     def apply_to_keypoint(self, keypoint, **params):
+        # print('keypoint, ', params)
         height = params["rows"]
         width = params["cols"]
         scale_x = params['width'] / width
@@ -55,8 +67,10 @@ class RandomScale(alb.Resize):
 
     def _get_scale(self):
         if self.step is not None:
-            scales = np.linspace(self.scale_range[0], self.scale_range[1],
-                                 int(self.scale_range[1] - self.scale_range[0]) / self.step).tolist()
+            scales = np.linspace(
+                self.scale_range[0], self.scale_range[1],
+                int(self.scale_range[1] - self.scale_range[0]) /
+                self.step).tolist()
             return random.choice(scales)
         else:
             return random.uniform(*self.scale_range)
@@ -173,7 +187,9 @@ class MaskMarker(alb.NoOp):
             if kwargs.get('name') not in MaskMarker._names:
                 MaskMarker._names.append(kwargs.get('name'))
             else:
-                logger.info(f"{kwargs.get('name')} has already existed. Please use another name.")
+                logger.info(
+                    f"{kwargs.get('name')} has already existed. Please use another name."
+                )
         else:
             MaskMarker._names.append(cls._hooker_count)
 
@@ -198,8 +214,12 @@ class MakeShrinkMap(alb.NoOp):
         >>> # In specificly, gt_mask = masks[:masks.shape[0]//2], effective_mask = masks[masks.shape[0]//2:]
     """
 
-    def __init__(self, ratios: list, max_shr: (int, float), min_text_size: int,
-                 always_apply=False, p=0.5):
+    def __init__(self,
+                 ratios: list,
+                 max_shr: (int, float),
+                 min_text_size: int,
+                 always_apply=False,
+                 p=0.5):
         super(MakeShrinkMap, self).__init__(always_apply=always_apply, p=p)
         self.ratios = ratios
         self.max_shr = max_shr
@@ -210,7 +230,10 @@ class MakeShrinkMap(alb.NoOp):
         # TODO, CONSIDERING FUSION CLASS MAKESHRINKMAP & CLASS MAKEBORDERMAP.
         keypoints = kwargs.get('keypoints')
         each_len = kwargs.get('each_len')
-        poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2] for i in range(1, len(each_len))]
+        poly = [
+            np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
+            for i in range(1, len(each_len))
+        ]
         shrink_maps = []
         mask_maps = []
         polygons = poly
@@ -218,7 +241,7 @@ class MakeShrinkMap(alb.NoOp):
         tags = kwargs.get('tags')
         h, w = image.shape[:2]
         for ratio in self.ratios:
-            ratio = 1 - ratio ** 2
+            ratio = 1 - ratio**2
             current_shrink_map = np.zeros(shape=(h, w, 1), dtype=np.float32)
             current_mask_map = np.ones(shape=(h, w, 1), dtype=np.float32)
             for idx, polygon in enumerate(polygons):
@@ -227,20 +250,24 @@ class MakeShrinkMap(alb.NoOp):
                 width = max(polygon[:, 0]) - min(polygon[:, 0])
                 if not tags[idx] or min(height, width) < self.min_text_size:
                     tags[idx] = False
-                    cv2.fillPoly(current_mask_map[:, :, 0], [polygon.astype(np.int32)], 0)
+                    cv2.fillPoly(current_mask_map[:, :, 0],
+                                 [polygon.astype(np.int32)], 0)
                     continue
                 p_polygon = Polygon(polygon)
                 area = p_polygon.area
                 perimeter = p_polygon.length
                 pco = pyclipper.PyclipperOffset()
-                pco.AddPath(polygon, pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
-                offset = min(area * ratio / perimeter + 0.5, self.max_shr)
+                pco.AddPath(polygon, pyclipper.JT_ROUND,
+                            pyclipper.ET_CLOSEDPOLYGON)
+                offset = area * ratio / perimeter
+                # offset = min(area * ratio / perimeter + 0.5, self.max_shr)
                 shrink_box = pco.Execute(-offset)
                 if not shrink_box or len(shrink_box[0]) <= 2:
                     shrink_box = polygon
 
                 shrink_box = np.array(shrink_box[0]).reshape(-1, 2)
-                cv2.fillPoly(current_shrink_map[:, :, 0], [shrink_box.astype(np.int32)], 1)
+                cv2.fillPoly(current_shrink_map[:, :, 0],
+                             [shrink_box.astype(np.int32)], 1)
 
             shrink_maps.append(current_shrink_map)
             mask_maps.append(current_mask_map)
@@ -256,11 +283,16 @@ class MakeShrinkMap(alb.NoOp):
 class RandomCropBasedOnBox(alb.RandomCropNearBBox):
     """Random crop the image based on the bounding boxes."""
 
-    def __init__(self, always_apply=False, p=1.0, max_tries=50, min_crop_side_ratio=0.1):
+    def __init__(self,
+                 always_apply=False,
+                 p=1.0,
+                 max_tries=50,
+                 min_crop_side_ratio=0.1):
         self.max_tries = max_tries
         self.min_crop_side_ratio = min_crop_side_ratio
 
-        super(RandomCropBasedOnBox, self).__init__(always_apply=always_apply, p=1)
+        super(RandomCropBasedOnBox, self).__init__(
+            always_apply=always_apply, p=1)
         self._crop_area = []
         self.p = p
 
@@ -269,19 +301,23 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
             return kwargs
         init_image = kwargs['image'].copy()
         # # print(kwargs['keypoints'])
-        kwargs = super(RandomCropBasedOnBox, self).__call__(force_apply=True, **kwargs)
+        kwargs = super(RandomCropBasedOnBox, self).__call__(
+            force_apply=True, **kwargs)
         # # print(self._crop_area)
         keypoints = kwargs['keypoints']
         # print(keypoints)
         each_len = kwargs['each_len']
-        poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
-                for i in range(1, len(each_len))]
+        poly = [
+            np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
+            for i in range(1, len(each_len))
+        ]
         tags = kwargs['tags']
         # print('before, ', tags)
         for idx, p in enumerate(poly):
             if tags[idx]:
                 # # print(p, '\n', self._crop_area)
-                if self.is_poly_outside_rect(p, 0, 0, self._crop_area[-2], self._crop_area[-1]):
+                if self.is_poly_outside_rect(p, 0, 0, self._crop_area[-2],
+                                             self._crop_area[-1]):
                     kwargs['tags'][idx] = False
                 # else:
                 #     pass
@@ -297,8 +333,10 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
         img = params['image']
         keypoints = params['keypoints']
         each_len = params['each_len']
-        poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
-                for i in range(1, len(each_len))]
+        poly = [
+            np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
+            for i in range(1, len(each_len))
+        ]
         tags = params['tags']
         all_care_polys = []
         for idx, line in enumerate(poly):
@@ -308,7 +346,12 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
         crop_x, crop_y, crop_w, crop_h = self.crop_area(img, all_care_polys)
         self._crop_area = [crop_x, crop_y, crop_w, crop_h]
 
-        return {"x_min": crop_x, "x_max": crop_x + crop_w, "y_min": crop_y, "y_max": crop_y + crop_h}
+        return {
+            "x_min": crop_x,
+            "x_max": crop_x + crop_w,
+            "y_min": crop_y,
+            "y_max": crop_y + crop_h
+        }
 
     @staticmethod
     def is_poly_in_rect(poly, x, y, w, h):
@@ -401,7 +444,8 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
                 continue
             num_poly_in_rect = 0
             for poly in polys:
-                if not self.is_poly_outside_rect(poly, xmin, ymin, xmax - xmin, ymax - ymin):
+                if not self.is_poly_outside_rect(poly, xmin, ymin, xmax - xmin,
+                                                 ymax - ymin):
                     num_poly_in_rect += 1
                     break
 
@@ -415,11 +459,17 @@ class RandomCropBasedOnBox(alb.RandomCropNearBBox):
 class RandomCropBasedOnBox2(alb.RandomCropNearBBox):
     """Random crop the image based on the bounding boxes."""
 
-    def __init__(self, always_apply=False, p=1.0, max_tries=50, min_crop_side_ratio=0.1, crop_size=(640, 640)):
+    def __init__(self,
+                 always_apply=False,
+                 p=1.0,
+                 max_tries=50,
+                 min_crop_side_ratio=0.1,
+                 crop_size=(640, 640)):
         self.max_tries = max_tries
         self.min_crop_side_ratio = min_crop_side_ratio
 
-        super(RandomCropBasedOnBox2, self).__init__(always_apply=always_apply, p=1)
+        super(RandomCropBasedOnBox2, self).__init__(
+            always_apply=always_apply, p=1)
         self._crop_area = []
         self.p = p
         self.crop_size = crop_size
@@ -429,18 +479,22 @@ class RandomCropBasedOnBox2(alb.RandomCropNearBBox):
             return kwargs
         init_image = kwargs['image'].copy()
         # # print(kwargs['keypoints'])
-        kwargs = super(RandomCropBasedOnBox2, self).__call__(force_apply=True, **kwargs)
+        kwargs = super(RandomCropBasedOnBox2, self).__call__(
+            force_apply=True, **kwargs)
         # # print(self._crop_area)
         keypoints = kwargs['keypoints']
         # print(keypoints)
         each_len = kwargs['each_len']
-        poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
-                for i in range(1, len(each_len))]
+        poly = [
+            np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
+            for i in range(1, len(each_len))
+        ]
         tags = kwargs['tags']
         # print('before, ', tags)
         for idx, p in enumerate(poly):
             if tags[idx]:
-                if self.is_poly_outside_rect(p, 0, 0, self._crop_area[-2], self._crop_area[-1]):
+                if self.is_poly_outside_rect(p, 0, 0, self._crop_area[-2],
+                                             self._crop_area[-1]):
                     kwargs['tags'][idx] = False
         return kwargs
 
@@ -452,8 +506,10 @@ class RandomCropBasedOnBox2(alb.RandomCropNearBBox):
         img = params['image']
         keypoints = params['keypoints']
         each_len = params['each_len']
-        poly = [np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
-                for i in range(1, len(each_len))]
+        poly = [
+            np.array(keypoints[each_len[i - 1]:each_len[i]])[:, :2]
+            for i in range(1, len(each_len))
+        ]
         tags = params['tags']
         all_care_polys = []
         for idx, line in enumerate(poly):
@@ -463,7 +519,12 @@ class RandomCropBasedOnBox2(alb.RandomCropNearBBox):
         crop_x, crop_y, crop_w, crop_h = self.crop_area(img, all_care_polys)
         self._crop_area = [crop_x, crop_y, crop_w, crop_h]
 
-        return {"x_min": crop_x, "x_max": crop_x + crop_w, "y_min": crop_y, "y_max": crop_y + crop_h}
+        return {
+            "x_min": crop_x,
+            "x_max": crop_x + crop_w,
+            "y_min": crop_y,
+            "y_max": crop_y + crop_h
+        }
 
     @staticmethod
     def is_poly_in_rect(poly, x, y, w, h):
@@ -524,7 +585,8 @@ class RandomCropBasedOnBox2(alb.RandomCropNearBBox):
 
             num_poly_in_rect = 0
             for poly in polys:
-                if not self.is_poly_outside_rect(poly, xmin, ymin, crop_w, crop_h):
+                if not self.is_poly_outside_rect(poly, xmin, ymin, crop_w,
+                                                 crop_h):
                     num_poly_in_rect += 1
                     break
             if num_poly_in_rect > 0:
@@ -557,7 +619,8 @@ class ToTensor(alb.DualTransform):
         return keypoints
 
     def __call__(self, force_apply=False, **kwargs):
-        kwargs = super(ToTensor, self).__call__(force_apply=force_apply, **kwargs)
+        kwargs = super(ToTensor, self).__call__(
+            force_apply=force_apply, **kwargs)
         if MaskMarker.get_names():
             for name in MaskMarker.get_names():
                 if name in kwargs:
@@ -571,7 +634,8 @@ class FilterKeys(alb.NoOp):
 
     def __init__(self, op_names):
         super(FilterKeys, self).__init__(always_apply=True, p=1)
-        self.op_names = op_names if isinstance(op_names, (list, tuple)) else [op_names]
+        self.op_names = op_names if isinstance(op_names,
+                                               (list, tuple)) else [op_names]
 
     def __call__(self, force_apply=False, **kwargs):
         for op in self.op_names:
@@ -595,12 +659,18 @@ class Grouping(alb.NoOp):
         assert 'masks' in kwargs
         groups = {}
         assert len(MaskMarker.get_names()) == len(MaskMarker.get_index()) - 1
-        for idx, (name, midx) in enumerate(zip(MaskMarker.get_names(), MaskMarker.get_index()[1:])):
+        for idx, (name, midx) in enumerate(
+                zip(MaskMarker.get_names(),
+                    MaskMarker.get_index()[1:])):
             axis = 0 if self.channel_first else -1
             if isinstance(kwargs['image'], torch.Tensor):
-                groups[name] = torch.cat(kwargs['masks'][MaskMarker.get_index()[idx]:midx], axis=axis)
+                groups[name] = torch.cat(
+                    kwargs['masks'][MaskMarker.get_index()[idx]:midx],
+                    axis=axis)
             else:
-                groups[name] = np.concatenate(kwargs['masks'][MaskMarker.get_index()[idx]:midx], axis=axis)
+                groups[name] = np.concatenate(
+                    kwargs['masks'][MaskMarker.get_index()[idx]:midx],
+                    axis=axis)
 
         kwargs.update(**groups)
         return kwargs
@@ -608,28 +678,34 @@ class Grouping(alb.NoOp):
 
 @TRANSFORMS.register_module
 class PadorResize(alb.PadIfNeeded):
-    def __init__(self, min_height=1024,
-                 min_width=1024,
-                 interpolation='bilinear',
-                 border_mode=cv2.BORDER_REFLECT_101,
-                 value=None,
-                 mask_value=None,
-                 always_apply=False,
-                 p=1.0, ):
+
+    def __init__(
+        self,
+        min_height=1024,
+        min_width=1024,
+        interpolation='bilinear',
+        border_mode=cv2.BORDER_REFLECT_101,
+        value=None,
+        mask_value=None,
+        always_apply=False,
+        p=1.0,
+    ):
         border_mode = CV2_BORDER_MODE[border_mode]
 
-        self.resize = alb.LongestMaxSize(max_size=max(min_width, min_height),
-                                         interpolation=CV2_MODE[interpolation],
-                                         always_apply=True)
+        self.resize = alb.LongestMaxSize(
+            max_size=max(min_width, min_height),
+            interpolation=CV2_MODE[interpolation],
+            always_apply=True)
 
-        super(PadorResize, self).__init__(min_height=min_height,
-                                          min_width=min_width,
-                                          border_mode=border_mode,
-                                          value=value,
-                                          mask_value=mask_value,
-                                          always_apply=always_apply,
-                                          p=p,
-                                          )
+        super(PadorResize, self).__init__(
+            min_height=min_height,
+            min_width=min_width,
+            border_mode=border_mode,
+            value=value,
+            mask_value=mask_value,
+            always_apply=always_apply,
+            p=p,
+        )
 
     def update_params(self, params, **kwargs):
         params = super(PadorResize, self).update_params(params, **kwargs)
@@ -650,9 +726,12 @@ class PadorResize(alb.PadIfNeeded):
             w_pad_left = 0
             w_pad_right = 0
 
-        params.update(
-            {"pad_top": h_pad_top, "pad_bottom": h_pad_bottom, "pad_left": w_pad_left, "pad_right": w_pad_right}
-        )
+        params.update({
+            "pad_top": h_pad_top,
+            "pad_bottom": h_pad_bottom,
+            "pad_left": w_pad_left,
+            "pad_right": w_pad_right
+        })
         return params
 
     def __call__(self, force_apply=False, **kwargs):
@@ -667,9 +746,10 @@ class PadorResize(alb.PadIfNeeded):
             tags = kwargs['tags']
             for idx, p in enumerate(poly):
                 if tags[idx]:
-                    if np.any(p[:, 0] < 0) or np.any(p[:, 0] > w) or np.any(p[:, 1] < 0) or np.any(p[:, 1] > h):
+                    if np.any(p[:, 0] < 0) or np.any(p[:, 0] > w) or np.any(
+                            p[:, 1] < 0) or np.any(p[:, 1] > h):
                         kwargs['tags'][idx] = False
-
+        cv2.imshow('pad_or_resize', kwargs['image'])
         return kwargs
 
 
@@ -685,8 +765,13 @@ class KeypointsToPolygon(alb.NoOp):
     def __call__(self, force_apply=False, **kwargs):
         assert 'each_len' in kwargs
         each_len = kwargs['each_len']
-        polygon = [np.array(kwargs['keypoints'][each_len[i - 1]:each_len[i]])[:, :2].reshape(-1, 2)
-                   for i in range(1, len(each_len))]
+        polygon = [
+            np.array(
+                kwargs['keypoints'][each_len[i -
+                                             1]:each_len[i]])[:, :2].reshape(
+                                                 -1, 2)
+            for i in range(1, len(each_len))
+        ]
         kwargs['polygon'] = polygon
 
         return kwargs
@@ -716,14 +801,13 @@ class MakeBorderMap(alb.NoOp):
             if not tags[i]:
                 continue
             try:
-                self.draw_border_map(polygons[i], canvas[:, :, 0],
-                                     mask=mask[:, :, 0])
+                self.draw_border_map(
+                    polygons[i], canvas[:, :, 0], mask=mask[:, :, 0])
             except:
                 # assert np.any(polygons[i][:, 1] <= 0) or np.any(polygons[i][:, 0] <= 0)
                 tags[i] = False
                 continue
-        canvas = canvas * (
-                self.thresh_max - self.thresh_min) + self.thresh_min
+        canvas = canvas * (self.thresh_max - self.thresh_min) + self.thresh_min
         if kwargs.get('masks') and kwargs.get('masks') is not None:
             kwargs['masks'] = kwargs['masks'] + [canvas, mask]
         else:
@@ -764,8 +848,8 @@ class MakeBorderMap(alb.NoOp):
             np.linspace(0, height - 1, num=height).reshape(height, 1),
             (height, width))
 
-        distance_map = np.zeros(
-            (polygon.shape[0], height, width), dtype=np.float32)
+        distance_map = np.zeros((polygon.shape[0], height, width),
+                                dtype=np.float32)
         for i in range(polygon.shape[0]):
             j = (i + 1) % polygon.shape[0]
             absolute_distance = self.distance(xs, ys, polygon[i], polygon[j])
@@ -777,9 +861,8 @@ class MakeBorderMap(alb.NoOp):
         ymin_valid = min(max(0, ymin), canvas.shape[0] - 1)
         ymax_valid = min(max(0, ymax), canvas.shape[0] - 1)
         canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1] = np.fmax(
-            1 - distance_map[
-                ymin_valid - ymin:ymax_valid - ymax + height,
-                xmin_valid - xmin:xmax_valid - xmax + width],
+            1 - distance_map[ymin_valid - ymin:ymax_valid - ymax + height,
+                             xmin_valid - xmin:xmax_valid - xmax + width],
             canvas[ymin_valid:ymax_valid + 1, xmin_valid:xmax_valid + 1])
 
     def distance(self, xs, ys, point_1, point_2):
@@ -790,36 +873,53 @@ class MakeBorderMap(alb.NoOp):
         point_1, point_2: (x, y), the end of the line
         '''
         height, width = xs.shape[:2]
-        square_distance_1 = np.square(
-            xs - point_1[0]) + np.square(ys - point_1[1])
-        square_distance_2 = np.square(
-            xs - point_2[0]) + np.square(ys - point_2[1])
-        square_distance = np.square(
-            point_1[0] - point_2[0]) + np.square(point_1[1] - point_2[1])
+        square_distance_1 = np.square(xs - point_1[0]) + np.square(ys -
+                                                                   point_1[1])
+        square_distance_2 = np.square(xs - point_2[0]) + np.square(ys -
+                                                                   point_2[1])
+        square_distance = np.square(point_1[0] -
+                                    point_2[0]) + np.square(point_1[1] -
+                                                            point_2[1])
 
         cosin = (square_distance - square_distance_1 - square_distance_2) / \
                 (2 * np.sqrt(square_distance_1 * square_distance_2))
         square_sin = 1 - np.square(cosin)
         square_sin = np.nan_to_num(square_sin)
-        result = np.sqrt(square_distance_1 * square_distance_2 *
-                         square_sin / square_distance)
+        result = np.sqrt(square_distance_1 * square_distance_2 * square_sin /
+                         square_distance)
 
-        result[cosin < 0] = np.sqrt(np.fmin(
-            square_distance_1, square_distance_2))[cosin < 0]
+        result[cosin < 0] = np.sqrt(
+            np.fmin(square_distance_1, square_distance_2))[cosin < 0]
 
         return result
 
     def extend_line(self, point_1, point_2, result):
-        ex_point_1 = (int(round(
-            point_1[0] + (point_1[0] - point_2[0]) * (1 + self.shrink_ratio))),
-                      int(round(point_1[1] + (point_1[1] - point_2[1]) * (
-                              1 + self.shrink_ratio))))
-        cv2.line(result, tuple(ex_point_1), tuple(point_1),
-                 4096.0, 1, lineType=cv2.LINE_AA, shift=0)
-        ex_point_2 = (int(round(
-            point_2[0] + (point_2[0] - point_1[0]) * (1 + self.shrink_ratio))),
-                      int(round(point_2[1] + (point_2[1] - point_1[1]) * (
-                              1 + self.shrink_ratio))))
-        cv2.line(result, tuple(ex_point_2), tuple(point_2),
-                 4096.0, 1, lineType=cv2.LINE_AA, shift=0)
+        ex_point_1 = (int(
+            round(point_1[0] + (point_1[0] - point_2[0]) *
+                  (1 + self.shrink_ratio))),
+                      int(
+                          round(point_1[1] + (point_1[1] - point_2[1]) *
+                                (1 + self.shrink_ratio))))
+        cv2.line(
+            result,
+            tuple(ex_point_1),
+            tuple(point_1),
+            4096.0,
+            1,
+            lineType=cv2.LINE_AA,
+            shift=0)
+        ex_point_2 = (int(
+            round(point_2[0] + (point_2[0] - point_1[0]) *
+                  (1 + self.shrink_ratio))),
+                      int(
+                          round(point_2[1] + (point_2[1] - point_1[1]) *
+                                (1 + self.shrink_ratio))))
+        cv2.line(
+            result,
+            tuple(ex_point_2),
+            tuple(point_2),
+            4096.0,
+            1,
+            lineType=cv2.LINE_AA,
+            shift=0)
         return ex_point_1, ex_point_2

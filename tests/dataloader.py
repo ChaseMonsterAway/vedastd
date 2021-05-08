@@ -3,17 +3,15 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
 
-import cv2
-import numpy as np
+import cv2 # noqa 402
+import numpy as np # noqa 402
 
-from vedastd.transforms import build_transform
-from vedastd.datasets import build_datasets
-from vedastd.dataloaders import build_dataloader
-from vedastd.dataloaders.collate_fn import build_collate_fn
-from tests.utils import tensor_to_numpy, show_polygon
+from vedastd.transforms import build_transform # noqa 402
+from vedastd.datasets import build_datasets # noqa 402
+from vedastd.dataloaders import build_dataloader # noqa 402
+from vedastd.dataloaders.collate_fn import build_collate_fn # noqa 402
+from tests.utils import tensor_to_numpy, show_polygon # noqa 402
 
-import albumentations as alb
-alb.Normalize
 
 if __name__ == '__main__':
     image = cv2.imread(r'D:\DATA_ALL\STD\IC5\ch4_test_images\img_1.jpg')
@@ -27,16 +25,21 @@ if __name__ == '__main__':
     tags = [True, True, False, True, False, True]
     each_len = [0, 4, 4 * 2, 4 * 3, 4 * 4, 4 * 5]
     tr = [
-        dict(type='LongestMaxSize', max_size=256, interpolation='bilinear', p=1),
+        dict(type='LongestMaxSize', max_size=256,
+             interpolation='bilinear', p=1),
         dict(type='RandomCropBasedOnBox'),
-        dict(type='PadIfNeeded', min_height=256, min_width=256, border_mode='constant',
-             value=0),
+        dict(type='PadIfNeeded', min_height=256,
+             min_width=256, border_mode='constant', value=0),
         dict(type='KeypointsToPolygon'),
-        dict(type='MakeShrinkMap', ratios=[1], max_shr=20, min_text_size=4, p=1),
+        dict(type='MakeShrinkMap', ratios=[1], max_shr=20,
+             min_text_size=4, p=1),
         dict(type='MaskMarker', name='gt'),
         dict(type='MakeBorderMap', shrink_ratio=0.4),
         dict(type='MaskMarker', name='border'),
-        dict(type='Normalize', mean=(123.675/255, 116.280/255, 103.530/255), std=(255.0/255, 255.0/255, 255.0/255), max_pixel_value=255),
+        dict(type='Normalize',
+             mean=(123.675/255, 116.280/255, 103.530/255),
+             std=(255.0/255, 255.0/255, 255.0/255),
+             max_pixel_value=255),
         dict(type='ToTensor'),
         dict(type='Grouping'),
     ]

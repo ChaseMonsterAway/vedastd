@@ -4,8 +4,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
 
-from vedastd.runners import TrainRunner
-from vedastd.utils import Config
+from vedastd.runners import TrainRunner  # noqa 402
+from vedastd.utils import Config  # noqa 402
 
 
 def parse_args():

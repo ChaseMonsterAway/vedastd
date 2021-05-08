@@ -1,13 +1,13 @@
-from collections import OrderedDict
-
 import numpy as np
 import torch
+from collections import OrderedDict
 
 from .registry import COLLATE_FN
 
 
 @COLLATE_FN.register_module
 class BaseCollate:
+
     def __init__(self, stack_keys):
         self.stack_keys = stack_keys
 

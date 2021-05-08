@@ -9,6 +9,7 @@ class FCModule(nn.Module):
 
     Args:
     """
+
     def __init__(self,
                  in_channels,
                  out_channels,
@@ -64,6 +65,7 @@ class FCModules(nn.Module):
 
     Args:
     """
+
     def __init__(self,
                  in_channels,
                  out_channels,
@@ -80,13 +82,18 @@ class FCModules(nn.Module):
         else:
             dropout = None
 
-        layers = [FCModule(in_channels, out_channels, bias, activation, inplace, dropout)]
+        layers = [
+            FCModule(in_channels, out_channels, bias, activation, inplace,
+                     dropout)
+        ]
         for ii in range(1, num_fcs):
             if dropouts is not None:
                 dropout = dropouts[ii]
             else:
                 dropout = None
-            layers.append(FCModule(out_channels, out_channels, bias, activation, inplace, dropout))
+            layers.append(
+                FCModule(out_channels, out_channels, bias, activation, inplace,
+                         dropout))
 
         self.block = nn.Sequential(*layers)
 

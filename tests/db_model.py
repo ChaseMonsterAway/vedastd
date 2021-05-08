@@ -3,9 +3,9 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../'))
 
-import torch
+import torch # noqa 402
 
-from vedastd.models import build_model
+from vedastd.models import build_model # noqa 402
 
 
 def main():
@@ -188,7 +188,6 @@ def main():
             elif 'bias' in name:
                 param.data.fill_(0)
             continue
-
     print(model)
     # dummy input
     dummy_input = torch.rand(size=(1, 3, 640, 640), dtype=torch.float32)

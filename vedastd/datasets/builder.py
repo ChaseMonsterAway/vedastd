@@ -1,7 +1,6 @@
 import logging
 
 from vedastd.utils import build_from_cfg
-
 from .registry import DATASETS
 
 logger = logging.getLogger()

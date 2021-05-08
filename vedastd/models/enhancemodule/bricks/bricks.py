@@ -1,11 +1,10 @@
-import math
 import copy
-
-import torch.nn as nn
+import math
 import torch
+import torch.nn as nn
 from torch.nn import functional as F
 
-from vedastd.models.utils import build_module, ConvModule
+from vedastd.models.utils import ConvModule, build_module
 from .registry import BRICKS
 
 
@@ -86,21 +85,22 @@ class FusionBlock(nn.Module):
         Args:
     """
 
-    def __init__(self,
-                 method,
-                 from_layers,
-                 feat_strides,
-                 in_channels_list,
-                 out_channels_list,
-                 upsample,
-                 conv_cfg=dict(type='Conv'),
-                 norm_cfg=dict(type='BN'),
-                 activation='relu',
-                 inplace=True,
-                 common_stride=4,
-                 multi_conv=False,
-                 bias=True,
-                 ):
+    def __init__(
+        self,
+        method,
+        from_layers,
+        feat_strides,
+        in_channels_list,
+        out_channels_list,
+        upsample,
+        conv_cfg=dict(type='Conv'),
+        norm_cfg=dict(type='BN'),
+        activation='relu',
+        inplace=True,
+        common_stride=4,
+        multi_conv=False,
+        bias=True,
+    ):
         super(FusionBlock, self).__init__()
 
         assert method in ('add', 'concat')
@@ -115,7 +115,8 @@ class FusionBlock(nn.Module):
             out_channels = out_channels_list[idx]
             feat_stride = feat_strides[idx]
             ups_num = int(
-                max(1, math.log2(feat_stride) - math.log2(common_stride)))
+                max(1,
+                    math.log2(feat_stride) - math.log2(common_stride)))
             head_ops = []
             for idx2 in range(ups_num):
                 cur_in_channels = in_channels if idx2 == 0 else out_channels
@@ -160,13 +161,14 @@ class UpsampleFusion(nn.Module):
         Args:
     """
 
-    def __init__(self,
-                 method,
-                 from_layers,
-                 feat_strides,
-                 upsample,
-                 common_stride=4,
-                 ):
+    def __init__(
+        self,
+        method,
+        from_layers,
+        feat_strides,
+        upsample,
+        common_stride=4,
+    ):
         super(UpsampleFusion, self).__init__()
 
         assert method in ('add', 'concat')
@@ -220,13 +222,20 @@ class CollectBlock(nn.Module):
             if isinstance(self.from_layer, str):
                 feats[self.to_layer] = feats[self.from_layer]
             elif isinstance(self.from_layer, list):
-                feats[self.to_layer] = {f_layer: feats[f_layer] for f_layer in
-                                        self.from_layer}
+                feats[self.to_layer] = {
+                    f_layer: feats[f_layer]
+                    for f_layer in self.from_layer
+                }
 
 
 @BRICKS.register_module
 class CellAttentionBlock(nn.Module):
-    def __init__(self, feat, hidden, fusion_method='add', post=None,
+
+    def __init__(self,
+                 feat,
+                 hidden,
+                 fusion_method='add',
+                 post=None,
                  post_activation='softmax'):
         super(CellAttentionBlock, self).__init__()
 
